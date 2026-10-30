@@ -1,0 +1,15 @@
+{
+  "name": "student-movement-tracker",
+  "version": "1.0.0",
+  "description": "Production-ready Student Movement Tracker with Google Sheets & Google Apps Script backend and four role-based web dashboards.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/run-tests.js",
+    "check": "node scripts/syntax-check.js"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "license": "MIT"
+}

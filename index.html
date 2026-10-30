@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Dashboard — Student Movement Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="brand-group">
+        <div class="brand-badge" aria-hidden="true">SMT</div>
+        <div class="brand-titles">
+          <h1 id="header-school-name">Student Movement Tracker</h1>
+          <p>Teacher Classroom Console</p>
+        </div>
+      </div>
+
+      <nav class="role-nav" aria-label="Role Dashboards">
+        <a href="index.html" class="active">Teacher App</a>
+        <a href="leading-teacher-dashboard.html">Leading Teacher</a>
+        <a href="principal-dashboard.html">Principal</a>
+        <a href="admin-dashboard.html">Admin</a>
+      </nav>
+
+      <div class="header-controls">
+        <span id="connection-status-pill" class="status-pill conn-unconfigured" role="status">
+          <span class="status-dot"></span>
+          <span id="connection-status-text">Backend Not Configured</span>
+        </span>
+        <span id="teacher-session-pill" class="session-pill">Locked (No Active Teacher)</span>
+        <button type="button" id="btn-lock-session" class="btn btn-secondary btn-sm" style="display: none;">Lock / Switch Teacher</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Shared Backend Connection Status Banner -->
+    <section id="endpoint-config-banner" class="config-banner shared-status-banner">
+      <div class="config-banner-text">
+        <strong>Backend Connection:</strong>
+        <span id="endpoint-banner-hint">Shared Google Apps Script Web App (Production)</span>
+      </div>
+      <div class="config-banner-meta">
+        <span class="endpoint-env-pill" id="endpoint-env-pill">Production</span>
+      </div>
+      <form id="endpoint-config-form" style="display: none;">
+        <input type="hidden" id="input-webapp-url">
+      </form>
+    </section>
+
+    <!-- Teacher Authentication Card -->
+    <section id="teacher-auth-section" class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Teacher Sign-In</h2>
+          <p class="card-subtitle">Select your active staff profile and enter the Teacher App PIN to record student movements.</p>
+        </div>
+        <button type="button" id="btn-reload-login-options" class="btn btn-secondary btn-sm">Reload Staff List</button>
+      </div>
+
+      <form id="teacher-login-form" class="form-grid" autocomplete="off">
+        <div class="form-group">
+          <label class="form-label" for="select-login-teacher">Active Teacher Profile</label>
+          <select id="select-login-teacher" required>
+            <option value="">— Select Teacher —</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="input-teacher-pin">Teacher App PIN</label>
+          <input type="password" id="input-teacher-pin" placeholder="Enter Teacher App PIN" required>
+        </div>
+
+        <div class="form-group" style="justify-content: flex-end;">
+          <label class="form-label" aria-hidden="true">&nbsp;</label>
+          <button type="submit" id="btn-teacher-login" class="btn btn-primary">Unlock Teacher Session</button>
+        </div>
+      </form>
+      <div id="teacher-auth-feedback" style="color: #991b1b; font-size: 0.86rem; font-weight: 600; margin-top: 0.25rem;"></div>
+    </section>
+
+    <!-- Authenticated Classroom Workspace -->
+    <div id="teacher-workspace" class="workspace-grid" style="display: none;">
+      <!-- Left Column: Record Student OUT -->
+      <section class="card" aria-labelledby="checkout-heading">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="checkout-heading">Record Student OUT</h2>
+            <p class="card-subtitle">Authenticated as <strong id="active-teacher-label">—</strong></p>
+          </div>
+          <div class="form-group" style="margin: 0; min-width: 190px;">
+            <label class="form-label" for="select-switch-teacher" style="font-size: 0.75rem;">Switch Teacher (Clears Session)</label>
+            <select id="select-switch-teacher" class="form-control">
+              <option value="">— Switch Teacher —</option>
+            </select>
+          </div>
+        </div>
+
+        <form id="record-out-form" autocomplete="off">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="select-class">1. Select Class</label>
+              <select id="select-class" required>
+                <option value="">— Select Class —</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="select-destination">2. Select Destination</label>
+              <select id="select-destination" required>
+                <option value="">— Select Destination —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <span class="form-label">Quick Destination Select</span>
+            <div id="destination-chips-container" class="destination-chips" role="group" aria-label="Quick destination choices"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="input-student-search">3. Search &amp; Select Student (by Name or ID)</label>
+            <input type="search" id="input-student-search" placeholder="Type student name or ID to filter class roster...">
+          </div>
+
+          <div class="form-group">
+            <div id="student-roster-container" class="student-roster-list" role="listbox" aria-label="Students in selected class">
+              <div class="empty-state">Select an active class above to view its students.</div>
+            </div>
+            <input type="hidden" id="selected-student-id" value="">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="input-movement-notes">Optional Notes</label>
+            <input type="text" id="input-movement-notes" placeholder="Optional note (e.g., Hall pass issued)">
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+            <div id="selected-student-summary" style="font-size: 0.88rem; color: var(--text-secondary);">
+              No student selected
+            </div>
+            <button type="submit" id="btn-mark-out" class="btn btn-primary" disabled>Mark Student OUT</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: Students Currently OUT -->
+      <section class="card" aria-labelledby="active-out-heading">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="active-out-heading">
+              Students Currently OUT (<span id="current-out-count">0</span>)
+            </h2>
+            <p class="card-subtitle">
+              Auto-refreshes every 10s · Last updated: <span id="last-refresh-time">—</span>
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button type="button" id="btn-manual-refresh" class="btn btn-secondary btn-sm">Refresh Now</button>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.9rem;">
+          <span class="badge badge-normal">Normal: &lt; 10m</span>
+          <span class="badge badge-warning">Warning: 10m – &lt; 15m</span>
+          <span class="badge badge-critical">Critical: ≥ 15m</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" aria-label="Students Currently Out">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Class</th>
+                <th>Destination</th>
+                <th>Checkout Time</th>
+                <th>Elapsed</th>
+                <th>Attention</th>
+                <th>Teacher</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="current-out-tbody">
+              <tr>
+                <td colspan="8" class="empty-state">Authenticate above to view live OUT records.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/teacher-dashboard.js"></script>
+</body>
+</html>

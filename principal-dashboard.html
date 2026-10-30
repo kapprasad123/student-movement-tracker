@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Principal Dashboard — Student Movement Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="brand-group">
+        <div class="brand-badge" aria-hidden="true">SMT</div>
+        <div class="brand-titles">
+          <h1 id="header-school-name">Student Movement Tracker</h1>
+          <p>Principal Live Schoolwide Monitor</p>
+        </div>
+      </div>
+
+      <nav class="role-nav" aria-label="Role Dashboards">
+        <a href="index.html">Teacher App</a>
+        <a href="leading-teacher-dashboard.html">Leading Teacher</a>
+        <a href="principal-dashboard.html" class="active">Principal</a>
+        <a href="admin-dashboard.html">Admin</a>
+      </nav>
+
+      <div class="header-controls">
+        <span id="connection-status-pill" class="status-pill conn-unconfigured" role="status">
+          <span class="status-dot"></span>
+          <span id="connection-status-text">Backend Not Configured</span>
+        </span>
+        <span id="principal-session-pill" class="session-pill">Locked</span>
+        <button type="button" id="btn-logout-principal" class="btn btn-secondary btn-sm" style="display: none;">Lock / Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Shared Backend Connection Status Banner -->
+    <section id="endpoint-config-banner" class="config-banner shared-status-banner">
+      <div class="config-banner-text">
+        <strong>Backend Connection:</strong>
+        <span id="endpoint-banner-hint">Shared Google Apps Script Web App (Production)</span>
+      </div>
+      <div class="config-banner-meta">
+        <span class="endpoint-env-pill" id="endpoint-env-pill">Production</span>
+      </div>
+      <form id="endpoint-config-form" style="display: none;">
+        <input type="hidden" id="input-webapp-url">
+      </form>
+    </section>
+
+    <!-- Principal Authentication Card -->
+    <section id="principal-auth-section" class="card" style="max-width: 540px; margin: 1.5rem auto;">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Principal Sign-In</h2>
+          <p class="card-subtitle">Enter the Principal passcode to monitor real-time schoolwide student movements.</p>
+        </div>
+      </div>
+      <form id="principal-login-form" autocomplete="off">
+        <div class="form-group">
+          <label class="form-label" for="input-principal-passcode">Principal Passcode</label>
+          <input type="password" id="input-principal-passcode" placeholder="Enter Principal passcode" required>
+        </div>
+        <button type="submit" id="btn-principal-login" class="btn btn-primary" style="width: 100%;">Sign In to Principal Dashboard</button>
+      </form>
+      <div id="principal-auth-feedback" style="color: #991b1b; font-size: 0.86rem; font-weight: 600; margin-top: 0.5rem;"></div>
+    </section>
+
+    <!-- Principal Live Monitoring Workspace -->
+    <div id="principal-workspace" style="display: none;">
+      <!-- 5 Required KPI Stat Cards -->
+      <section class="stats-grid" aria-label="Schoolwide Live Movement Summary">
+        <div class="stat-card stat-primary">
+          <span class="stat-label">Total Students Currently OUT</span>
+          <span class="stat-value" id="stat-total-out">0</span>
+          <span class="stat-meta">Live across all classes</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Affected Classes</span>
+          <span class="stat-value" id="stat-affected-classes">0</span>
+          <span class="stat-meta">Classes with students OUT</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Occupied Destinations</span>
+          <span class="stat-value" id="stat-occupied-destinations">0</span>
+          <span class="stat-meta">Active school locations</span>
+        </div>
+        <div class="stat-card stat-warning">
+          <span class="stat-label">Away ≥ 10 Minutes</span>
+          <span class="stat-value" id="stat-over-10">0</span>
+          <span class="stat-meta">Warning &amp; Critical thresholds</span>
+        </div>
+        <div class="stat-card stat-critical">
+          <span class="stat-label">Away ≥ 15 Minutes (Critical)</span>
+          <span class="stat-value" id="stat-over-15">0</span>
+          <span class="stat-meta">Immediate attention required</span>
+        </div>
+      </section>
+
+      <!-- Filters & Live Table -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Live Schoolwide Movement Overview</h2>
+            <p class="card-subtitle">
+              Auto-refreshes every 10s · Last successful update: <strong id="principal-last-update">—</strong>
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button type="button" id="btn-principal-refresh" class="btn btn-secondary btn-sm">Refresh Now</button>
+          </div>
+        </div>
+
+        <div class="form-grid" style="margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="filter-class">Filter by Class</label>
+            <select id="filter-class">
+              <option value="">All Classes</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="filter-destination">Filter by Destination</label>
+            <select id="filter-destination">
+              <option value="">All Destinations</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="filter-attention">Filter by Attention Category</label>
+            <select id="filter-attention">
+              <option value="">All Attention Levels</option>
+              <option value="Normal">Normal (&lt; 10m)</option>
+              <option value="Warning">Warning (10m – &lt; 15m)</option>
+              <option value="Critical">Critical (≥ 15m)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="filter-search">Search Student Name or ID</label>
+            <input type="search" id="filter-search" placeholder="Search by name or student ID...">
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" aria-label="Principal Live Student Movements">
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Student ID</th>
+                <th>Class</th>
+                <th>Teacher</th>
+                <th>Destination</th>
+                <th>Checkout Time</th>
+                <th>Elapsed Duration</th>
+                <th>Attention Level</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="principal-movements-tbody">
+              <tr>
+                <td colspan="9" class="empty-state">Sign in above to view live schoolwide movement data.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/principal-dashboard.js"></script>
+</body>
+</html>

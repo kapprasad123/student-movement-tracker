@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leading Teacher Dashboard — Student Movement Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="brand-group">
+        <div class="brand-badge" aria-hidden="true">SMT</div>
+        <div class="brand-titles">
+          <h1 id="header-school-name">Student Movement Tracker</h1>
+          <p>Leading Teacher Supervision Console</p>
+        </div>
+      </div>
+
+      <nav class="role-nav" aria-label="Role Dashboards">
+        <a href="index.html">Teacher App</a>
+        <a href="leading-teacher-dashboard.html" class="active">Leading Teacher</a>
+        <a href="principal-dashboard.html">Principal</a>
+        <a href="admin-dashboard.html">Admin</a>
+      </nav>
+
+      <div class="header-controls">
+        <span id="connection-status-pill" class="status-pill conn-unconfigured" role="status">
+          <span class="status-dot"></span>
+          <span id="connection-status-text">Backend Not Configured</span>
+        </span>
+        <span id="lt-session-pill" class="session-pill">Locked</span>
+        <button type="button" id="btn-logout-lt" class="btn btn-secondary btn-sm" style="display: none;">Lock / Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Shared Backend Connection Status Banner -->
+    <section id="endpoint-config-banner" class="config-banner shared-status-banner">
+      <div class="config-banner-text">
+        <strong>Backend Connection:</strong>
+        <span id="endpoint-banner-hint">Shared Google Apps Script Web App (Production)</span>
+      </div>
+      <div class="config-banner-meta">
+        <span class="endpoint-env-pill" id="endpoint-env-pill">Production</span>
+      </div>
+      <form id="endpoint-config-form" style="display: none;">
+        <input type="hidden" id="input-webapp-url">
+      </form>
+    </section>
+
+    <!-- Leading Teacher Sign-In -->
+    <section id="lt-auth-section" class="card" style="max-width: 580px; margin: 1.5rem auto;">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Leading Teacher Sign-In</h2>
+          <p class="card-subtitle">Select your Leading Teacher profile and enter the Leading Teacher passcode to monitor your assigned classes.</p>
+        </div>
+        <button type="button" id="btn-reload-lt-options" class="btn btn-secondary btn-sm">Reload List</button>
+      </div>
+      <form id="lt-login-form" autocomplete="off">
+        <div class="form-group">
+          <label class="form-label" for="select-lt-profile">Leading Teacher Profile</label>
+          <select id="select-lt-profile" required>
+            <option value="">— Select Leading Teacher —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-lt-passcode">Leading Teacher Passcode</label>
+          <input type="password" id="input-lt-passcode" placeholder="Enter Leading Teacher passcode" required>
+        </div>
+        <button type="submit" id="btn-lt-login" class="btn btn-primary" style="width: 100%;">Sign In to Assigned Classes</button>
+      </form>
+      <div id="lt-auth-feedback" style="color: #991b1b; font-size: 0.86rem; font-weight: 600; margin-top: 0.5rem;"></div>
+    </section>
+
+    <!-- Leading Teacher Workspace -->
+    <div id="lt-workspace" style="display: none;">
+      <div class="card" style="padding: 0.9rem 1.25rem;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
+          <div>
+            <strong>Assigned Classes for <span id="lt-profile-name">—</span>:</strong>
+            <span id="lt-assigned-classes-badges" style="margin-left: 0.5rem;"></span>
+          </div>
+          <div style="font-size: 0.84rem; color: var(--text-secondary);">
+            Auto-refreshes every 10s · Last updated: <strong id="lt-last-update">—</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Stats for Assigned Classes -->
+      <section class="stats-grid" aria-label="Assigned Classes Movement Statistics">
+        <div class="stat-card stat-primary">
+          <span class="stat-label">Assigned Classes</span>
+          <span class="stat-value" id="lt-stat-assigned-classes">0</span>
+          <span class="stat-meta">Authorized class scope</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Currently OUT (Assigned)</span>
+          <span class="stat-value" id="lt-stat-current-out">0</span>
+          <span class="stat-meta">Students outside classroom</span>
+        </div>
+        <div class="stat-card stat-warning">
+          <span class="stat-label">Warning (10m – &lt;15m)</span>
+          <span class="stat-value" id="lt-stat-warning">0</span>
+          <span class="stat-meta">In assigned classes</span>
+        </div>
+        <div class="stat-card stat-critical">
+          <span class="stat-label">Critical (≥ 15m)</span>
+          <span class="stat-value" id="lt-stat-critical">0</span>
+          <span class="stat-meta">Immediate follow-up</span>
+        </div>
+      </section>
+
+      <!-- Tabs: Live Currently OUT vs Assigned Class History & Reports -->
+      <div class="tabs-scroll-wrapper">
+        <div class="tabs-nav" role="tablist">
+          <button type="button" class="tab-btn active" data-lt-tab="live">Currently OUT (Assigned Classes)</button>
+          <button type="button" class="tab-btn" data-lt-tab="history">Assigned Class Movement History &amp; Reports</button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Live Currently OUT -->
+      <section id="lt-tab-live" class="tab-panel active card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Currently OUT Students in Assigned Classes</h2>
+            <p class="card-subtitle">Access is strictly scoped to your active Leading Teacher Class Assignments.</p>
+          </div>
+          <button type="button" id="btn-lt-refresh" class="btn btn-secondary btn-sm">Refresh Now</button>
+        </div>
+
+        <div class="form-grid" style="margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="lt-filter-class">Filter Assigned Class</label>
+            <select id="lt-filter-class">
+              <option value="">All Assigned Classes</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="lt-filter-destination">Filter Destination</label>
+            <select id="lt-filter-destination">
+              <option value="">All Destinations</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="lt-filter-attention">Filter Attention Level</label>
+            <select id="lt-filter-attention">
+              <option value="">All Levels</option>
+              <option value="Normal">Normal (&lt; 10m)</option>
+              <option value="Warning">Warning (10m – &lt; 15m)</option>
+              <option value="Critical">Critical (≥ 15m)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="lt-filter-search">Search Student Name or ID</label>
+            <input type="search" id="lt-filter-search" placeholder="Search student name or ID...">
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" aria-label="Leading Teacher Currently Out Students">
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Student ID</th>
+                <th>Class</th>
+                <th>Destination</th>
+                <th>Teacher</th>
+                <th>Checkout Time</th>
+                <th>Elapsed Duration</th>
+                <th>Attention Level</th>
+              </tr>
+            </thead>
+            <tbody id="lt-live-tbody">
+              <tr>
+                <td colspan="8" class="empty-state">Sign in to view currently OUT students for your assigned classes.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab 2: Movement History & Reports for Assigned Classes -->
+      <section id="lt-tab-history" class="tab-panel card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Assigned Class Movement History &amp; Reports</h2>
+            <p class="card-subtitle">Read-only movement log and analytics restricted to your assigned classes.</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" id="btn-lt-export-csv" class="btn btn-secondary btn-sm">Export CSV</button>
+            <button type="button" id="btn-lt-load-history" class="btn btn-primary btn-sm">Apply Filters</button>
+          </div>
+        </div>
+
+        <div class="form-grid" style="margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="lt-hist-range">Date Range</label>
+            <select id="lt-hist-range">
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="this_week">This Week</option>
+              <option value="this_month">This Month</option>
+              <option value="all" selected>All Dates</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="lt-hist-class">Assigned Class</label>
+            <select id="lt-hist-class">
+              <option value="">All Assigned Classes</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="lt-hist-status">Movement Status</label>
+            <select id="lt-hist-status">
+              <option value="">All Statuses</option>
+              <option value="OUT">Currently OUT</option>
+              <option value="RETURNED">Returned</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="lt-hist-search">Search Student</label>
+            <input type="search" id="lt-hist-search" placeholder="Student name or ID...">
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" aria-label="Assigned Class Movement History">
+            <thead>
+              <tr>
+                <th>Movement ID</th>
+                <th>Student</th>
+                <th>Class</th>
+                <th>Destination</th>
+                <th>Checkout</th>
+                <th>Returned</th>
+                <th>Duration</th>
+                <th>Attention</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="lt-history-tbody">
+              <tr>
+                <td colspan="9" class="empty-state">Select filters and click Apply Filters to view movement history.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/leading-teacher-dashboard.js"></script>
+</body>
+</html>

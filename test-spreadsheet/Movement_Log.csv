@@ -1,0 +1,2 @@
+MovementID,StudentID,StudentName,ClassID,ClassName,TeacherID,TeacherName,Destination,TimeOut,TimeIn,Status,Notes
+MOV-1793367418552-0001,STU-101,Ahmed Ali,CLS-10A,Grade 10A,TCH-01,Mr. Ibrahim Didi,Library,2026-10-30T13:28:58.552Z,,OUT,Reference book collection

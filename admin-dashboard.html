@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Student Movement Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="brand-group">
+        <div class="brand-badge" aria-hidden="true">SMT</div>
+        <div class="brand-titles">
+          <h1 id="header-school-name">Student Movement Tracker</h1>
+          <p>System Administration &amp; Analytics</p>
+        </div>
+      </div>
+
+      <nav class="role-nav" aria-label="Role Dashboards">
+        <a href="index.html">Teacher App</a>
+        <a href="leading-teacher-dashboard.html">Leading Teacher</a>
+        <a href="principal-dashboard.html">Principal</a>
+        <a href="admin-dashboard.html" class="active">Admin</a>
+      </nav>
+
+      <div class="header-controls">
+        <span id="connection-status-pill" class="status-pill conn-unconfigured" role="status">
+          <span class="status-dot"></span>
+          <span id="connection-status-text">Backend Not Configured</span>
+        </span>
+        <span id="admin-session-pill" class="session-pill">Locked</span>
+        <button type="button" id="btn-logout-admin" class="btn btn-secondary btn-sm" style="display: none;">Lock / Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Central Google Apps Script Endpoint Configuration Bar -->
+    <section id="endpoint-config-banner" class="config-banner admin-endpoint-banner">
+      <div class="config-banner-text">
+        <strong>Central Google Apps Script Endpoint:</strong>
+        <span id="endpoint-banner-hint">Shared backend for all four dashboards. Defaults to the production Google Apps Script Web App.</span>
+      </div>
+      <form id="endpoint-config-form" class="config-banner-form">
+        <input type="text" id="input-webapp-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" aria-label="Google Apps Script Web App URL" style="max-width: 420px;">
+        <button type="submit" class="btn btn-primary btn-sm" id="btn-save-endpoint">Apply Endpoint</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-use-production-endpoint">Use Production</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-use-local-endpoint">Use Local Test Proxy</button>
+      </form>
+    </section>
+
+    <!-- Admin Authentication Card -->
+    <section id="admin-auth-section" class="card" style="max-width: 540px; margin: 1.5rem auto;">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Administrator Sign-In</h2>
+          <p class="card-subtitle">Enter the Administrator passcode to manage students, classes, staff, settings, security credentials, and reports.</p>
+        </div>
+      </div>
+      <form id="admin-login-form" autocomplete="off">
+        <div class="form-group">
+          <label class="form-label" for="input-admin-passcode">Administrator Passcode</label>
+          <input type="password" id="input-admin-passcode" placeholder="Enter Administrator passcode" required>
+        </div>
+        <button type="submit" id="btn-admin-login" class="btn btn-primary" style="width: 100%;">Sign In to Admin Dashboard</button>
+      </form>
+      <div id="admin-auth-feedback" style="color: #991b1b; font-size: 0.86rem; font-weight: 600; margin-top: 0.5rem;"></div>
+    </section>
+
+    <!-- Authenticated Admin Workspace -->
+    <div id="admin-workspace" style="display: none;">
+      <!-- Horizontal Scrollable Navigation Tabs -->
+      <div class="tabs-scroll-wrapper" role="navigation" aria-label="Admin Sections">
+        <div class="tabs-nav" id="admin-tabs-nav" role="tablist">
+          <button type="button" class="tab-btn active" role="tab" data-admin-tab="overview">1. Overview</button>
+          <button type="button" class="tab-btn" role="tab" data-admin-tab="students">2. Students &amp; Bulk Import</button>
+          <button type="button" class="tab-btn" role="tab" data-admin-tab="classes">3. Classes</button>
+          <button type="button" class="tab-btn" role="tab" data-admin-tab="teachers">4. Teachers</button>
+          <button type="button" class="tab-btn" role="tab" data-admin-tab="leading-teachers">5. Leading Teachers</button>
+          <button type="button" class="tab-btn" role="tab" data-admin-tab="teaching-assignments">6. Teaching Assignments</button>
+          <button type="button" class="tab-btn" role="tab" data-admin-tab="lt-assignments">7. LT Class Assignments</button>
+          <button type="button" class="tab-btn" role="tab" data-admin-tab="settings">8. Destinations &amp; Settings</button>
+          <button type="button" class="tab-btn" role="tab" data-admin-tab="passcodes">9. Passcode Management</button>
+          <button type="button" class="tab-btn" role="tab" data-admin-tab="reports">10. Reports &amp; Analytics</button>
+        </div>
+      </div>
+
+      <!-- TAB 1: OVERVIEW -->
+      <section id="tab-overview" class="tab-panel active">
+        <div class="stats-grid">
+          <div class="stat-card stat-primary">
+            <span class="stat-label">Total Students</span>
+            <span class="stat-value" id="ov-total-students">0</span>
+            <span class="stat-meta">Active: <span id="ov-active-students">0</span></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Active Classes</span>
+            <span class="stat-value" id="ov-active-classes">0</span>
+            <span class="stat-meta">Configured class groups</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Active Teachers</span>
+            <span class="stat-value" id="ov-active-teachers">0</span>
+            <span class="stat-meta">In Teacher App login</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Active Leading Teachers</span>
+            <span class="stat-value" id="ov-active-lt">0</span>
+            <span class="stat-meta">Supervising classes</span>
+          </div>
+          <div class="stat-card stat-warning">
+            <span class="stat-label">Current OUT Count</span>
+            <span class="stat-value" id="ov-current-out">0</span>
+            <span class="stat-meta">Students outside now</span>
+          </div>
+          <div class="stat-card stat-critical">
+            <span class="stat-label">Critical Movements</span>
+            <span class="stat-value" id="ov-critical-count">0</span>
+            <span class="stat-meta">Away ≥ 15 minutes</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Recent Movement Activity</h2>
+              <p class="card-subtitle">Latest student checkouts and returns across the school.</p>
+            </div>
+            <button type="button" id="btn-refresh-overview" class="btn btn-secondary btn-sm">Refresh Overview</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Movement ID</th>
+                  <th>Student</th>
+                  <th>Class</th>
+                  <th>Destination</th>
+                  <th>Teacher</th>
+                  <th>Checkout</th>
+                  <th>Returned</th>
+                  <th>Duration</th>
+                  <th>Attention</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="ov-recent-tbody">
+                <tr><td colspan="10" class="empty-state">Loading recent movements...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: STUDENT MANAGEMENT & BULK CSV IMPORT -->
+      <section id="tab-students" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="student-form-heading">Add / Edit Student</h2>
+              <p class="card-subtitle">Student IDs are unique and immutable once created. Historical records are always preserved.</p>
+            </div>
+            <button type="button" id="btn-reset-student-form" class="btn btn-secondary btn-sm">Clear Form</button>
+          </div>
+          <form id="student-form" class="form-grid" autocomplete="off">
+            <input type="hidden" id="student-edit-mode" value="add">
+            <div class="form-group">
+              <label class="form-label" for="stu-input-id">Unique Student ID</label>
+              <input type="text" id="stu-input-id" placeholder="e.g., STU-1001" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stu-input-name">Student Full Name</label>
+              <input type="text" id="stu-input-name" placeholder="e.g., Aishath Ibrahim" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stu-select-class">Assigned Class</label>
+              <select id="stu-select-class" required>
+                <option value="">— Select Class —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="stu-select-status">Status</label>
+              <select id="stu-select-status">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+              <label class="form-label" aria-hidden="true">&nbsp;</label>
+              <button type="submit" id="btn-save-student" class="btn btn-primary">Save Student</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Bulk CSV / Tabular Paste Student Import -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Bulk Student Import (CSV File or Pasted Tabular Data)</h2>
+              <p class="card-subtitle">Supports aliases (StudentID/ID, StudentName/Name, ClassID/ClassName/Grade). Preview validates rows before writing.</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="bulk-csv-file">Upload CSV File</label>
+              <input type="file" id="bulk-csv-file" accept=".csv,.tsv,.txt" class="form-control">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label" for="bulk-paste-textarea">Or Paste CSV / Spreadsheet Rows (StudentID, StudentName, Class)</label>
+              <textarea id="bulk-paste-textarea" rows="4" placeholder="StudentID,StudentName,Class&#10;STU-2001,Mohamed Rasheed,Grade 10A&#10;STU-2002,Mariyam Niuma,Grade 10B"></textarea>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <button type="button" id="btn-preview-bulk" class="btn btn-secondary">Validate &amp; Preview Import</button>
+            <button type="button" id="btn-confirm-bulk-import" class="btn btn-success" disabled>Confirm &amp; Import Valid Rows (0)</button>
+            <button type="button" id="btn-clear-bulk" class="btn btn-secondary btn-sm">Reset Import</button>
+          </div>
+
+          <div id="bulk-preview-container" style="display: none;">
+            <div class="stats-grid" style="margin-bottom: 0.9rem;">
+              <div class="stat-card stat-primary">
+                <span class="stat-label">Valid Rows Ready to Import</span>
+                <span class="stat-value" id="bulk-valid-count">0</span>
+              </div>
+              <div class="stat-card stat-warning">
+                <span class="stat-label">Skipped (ID Already in Sheet)</span>
+                <span class="stat-value" id="bulk-skipped-count">0</span>
+              </div>
+              <div class="stat-card stat-critical">
+                <span class="stat-label">Invalid / Duplicate Rows</span>
+                <span class="stat-value" id="bulk-invalid-count">0</span>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div>
+                <h4 style="margin: 0 0 0.4rem;">Valid Rows (<span id="bulk-valid-label">0</span>)</h4>
+                <div class="table-responsive" style="max-height: 220px;">
+                  <table class="data-table">
+                    <thead><tr><th>Row</th><th>Student ID</th><th>Name</th><th>Class</th></tr></thead>
+                    <tbody id="bulk-valid-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div>
+                <h4 style="margin: 0 0 0.4rem;">Invalid &amp; Skipped Rows (<span id="bulk-issues-label">0</span>)</h4>
+                <div class="table-responsive" style="max-height: 220px;">
+                  <table class="data-table">
+                    <thead><tr><th>Row</th><th>Student ID</th><th>Reason</th></tr></thead>
+                    <tbody id="bulk-issues-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="bulk-import-result-summary" style="margin-top: 0.75rem; font-weight: 600;"></div>
+        </div>
+
+        <!-- Student Directory Table -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Student Directory</h2>
+              <p class="card-subtitle">Search, filter, edit, or deactivate students (students currently OUT cannot be deactivated).</p>
+            </div>
+          </div>
+          <div class="form-grid" style="margin-bottom: 1rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="stu-filter-class">Filter Class</label>
+              <select id="stu-filter-class"><option value="">All Classes</option></select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="stu-filter-status">Filter Status</label>
+              <select id="stu-filter-status">
+                <option value="">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="stu-filter-search">Search Name or ID</label>
+              <input type="search" id="stu-filter-search" placeholder="Search by Student Name or ID...">
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Student ID</th>
+                  <th>Student Name</th>
+                  <th>Class</th>
+                  <th>Status</th>
+                  <th>Movement State</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-students-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: CLASS MANAGEMENT -->
+      <section id="tab-classes" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="class-form-heading">Add / Edit Class</h2>
+              <p class="card-subtitle">Case-insensitive duplicate class names are prevented. Renaming a class preserves its ClassID and all student links.</p>
+            </div>
+            <button type="button" id="btn-reset-class-form" class="btn btn-secondary btn-sm">Clear Form</button>
+          </div>
+          <form id="class-form" class="form-grid" autocomplete="off">
+            <input type="hidden" id="class-edit-mode" value="add">
+            <div class="form-group">
+              <label class="form-label" for="cls-input-id">Class ID (auto-generated if blank)</label>
+              <input type="text" id="cls-input-id" placeholder="e.g., CLS-10A">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cls-input-name">Class Name</label>
+              <input type="text" id="cls-input-name" placeholder="e.g., Grade 10A" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cls-select-status">Status</label>
+              <select id="cls-select-status">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+              <label class="form-label" aria-hidden="true">&nbsp;</label>
+              <button type="submit" class="btn btn-primary">Save Class</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Classes Directory</h2>
+            <input type="search" id="cls-filter-search" placeholder="Search classes..." style="max-width: 260px;">
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Class ID</th>
+                  <th>Class Name</th>
+                  <th>Active Enrolled Students</th>
+                  <th>Total Historical Students</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-classes-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: TEACHER MANAGEMENT -->
+      <section id="tab-teachers" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="teacher-form-heading">Add / Edit Teacher Profile</h2>
+              <p class="card-subtitle">Active teachers appear in the Teacher App login dropdown.</p>
+            </div>
+            <button type="button" id="btn-reset-teacher-form" class="btn btn-secondary btn-sm">Clear Form</button>
+          </div>
+          <form id="teacher-form" class="form-grid" autocomplete="off">
+            <input type="hidden" id="teacher-edit-mode" value="add">
+            <div class="form-group">
+              <label class="form-label" for="tch-input-id">Teacher ID (auto-generated if blank)</label>
+              <input type="text" id="tch-input-id" placeholder="e.g., TCH-101">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="tch-input-name">Teacher Full Name</label>
+              <input type="text" id="tch-input-name" placeholder="e.g., Ahmed Naseer" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="tch-select-status">Status</label>
+              <select id="tch-select-status">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+              <label class="form-label" aria-hidden="true">&nbsp;</label>
+              <button type="submit" class="btn btn-primary">Save Teacher</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Teacher Directory</h2>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Teacher ID</th>
+                  <th>Teacher Name</th>
+                  <th>Active Teaching Assignments</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-teachers-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: LEADING TEACHER MANAGEMENT -->
+      <section id="tab-leading-teachers" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="lt-form-heading">Add / Edit Leading Teacher Profile</h2>
+              <p class="card-subtitle">Leading Teachers supervise their assigned classes in the Leading Teacher Dashboard.</p>
+            </div>
+            <button type="button" id="btn-reset-lt-form" class="btn btn-secondary btn-sm">Clear Form</button>
+          </div>
+          <form id="lt-form" class="form-grid" autocomplete="off">
+            <input type="hidden" id="lt-edit-mode" value="add">
+            <div class="form-group">
+              <label class="form-label" for="lt-input-id">Leading Teacher ID (auto-generated if blank)</label>
+              <input type="text" id="lt-input-id" placeholder="e.g., LT-101">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="lt-input-name">Leading Teacher Name</label>
+              <input type="text" id="lt-input-name" placeholder="e.g., Fathimath Shifaza" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="lt-select-status">Status</label>
+              <select id="lt-select-status">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+              <label class="form-label" aria-hidden="true">&nbsp;</label>
+              <button type="submit" class="btn btn-primary">Save Leading Teacher</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Leading Teachers Directory</h2>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Leading Teacher ID</th>
+                  <th>Leading Teacher Name</th>
+                  <th>Assigned Classes &amp; Periods</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-lt-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: TEACHING ASSIGNMENTS -->
+      <section id="tab-teaching-assignments" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Assign Teacher to Class</h2>
+              <p class="card-subtitle">Supports multiple classes per teacher while preventing duplicate active assignments.</p>
+            </div>
+          </div>
+          <form id="teaching-assignment-form" class="form-grid" autocomplete="off">
+            <div class="form-group">
+              <label class="form-label" for="tasg-select-teacher">Active Teacher</label>
+              <select id="tasg-select-teacher" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="tasg-select-class">Active Class</label>
+              <select id="tasg-select-class" required></select>
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+              <label class="form-label" aria-hidden="true">&nbsp;</label>
+              <button type="submit" class="btn btn-primary">Add Teaching Assignment</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Teaching Assignments</h2>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Assignment ID</th>
+                  <th>Teacher</th>
+                  <th>Class</th>
+                  <th>Status</th>
+                  <th>Updated</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-tasg-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: LEADING TEACHER CLASS ASSIGNMENTS -->
+      <section id="tab-lt-assignments" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Assign Leading Teacher to Class &amp; Period</h2>
+              <p class="card-subtitle">Prevents conflicting active assignments for the same class and period.</p>
+            </div>
+          </div>
+          <form id="lt-assignment-form" class="form-grid" autocomplete="off">
+            <div class="form-group">
+              <label class="form-label" for="ltasg-select-lt">Active Leading Teacher</label>
+              <select id="ltasg-select-lt" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ltasg-select-class">Active Class</label>
+              <select id="ltasg-select-class" required></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ltasg-input-period">Assignment Period</label>
+              <input type="text" id="ltasg-input-period" value="2026 Academic Year" required>
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+              <label class="form-label" aria-hidden="true">&nbsp;</label>
+              <button type="submit" class="btn btn-primary">Assign Class to Leading Teacher</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Leading Teacher Class Assignments</h2>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Assignment ID</th>
+                  <th>Leading Teacher</th>
+                  <th>Class</th>
+                  <th>Period</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-ltasg-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 8: DESTINATIONS & SETTINGS -->
+      <section id="tab-settings" class="tab-panel">
+        <div class="workspace-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">School Configuration &amp; Attention Thresholds</h2>
+                <p class="card-subtitle">Public settings are sanitized; credentials are never returned by settings APIs.</p>
+              </div>
+            </div>
+            <form id="school-settings-form" autocomplete="off">
+              <div class="form-group">
+                <label class="form-label" for="set-school-name">School Name</label>
+                <input type="text" id="set-school-name" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="set-school-tz">School Timezone</label>
+                <input type="text" id="set-school-tz" required>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="set-warn-mins">Warning Threshold (Minutes)</label>
+                  <input type="number" id="set-warn-mins" min="1" max="120" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="set-crit-mins">Critical Threshold (Minutes)</label>
+                  <input type="number" id="set-crit-mins" min="2" max="240" required>
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="set-session-timeout">Role Session Timeout (Minutes)</label>
+                  <input type="number" id="set-session-timeout" min="5" max="1440" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="set-teacher-timeout">Teacher Session Timeout (Minutes)</label>
+                  <input type="number" id="set-teacher-timeout" min="5" max="1440" required>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Save School Settings</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Configured Destinations</h2>
+                <p class="card-subtitle">Locations students can visit when leaving the classroom.</p>
+              </div>
+            </div>
+            <form id="add-destination-form" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+              <input type="text" id="input-new-destination" placeholder="Add new destination (e.g., Dental Room)" required>
+              <button type="submit" class="btn btn-primary">Add Destination</button>
+            </form>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th>Destination Name</th><th>Action</th></tr></thead>
+                <tbody id="admin-destinations-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 9: PASSCODE & PIN MANAGEMENT -->
+      <section id="tab-passcodes" class="tab-panel">
+        <div class="card" style="max-width: 720px;">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Role Passcode &amp; Teacher App PIN Management</h2>
+              <p class="card-subtitle">
+                Requires current Administrator passcode confirmation. Stored as salted SHA-256 hashes. Updating a credential rotates its signing secret and invalidates active sessions for that role.
+              </p>
+            </div>
+          </div>
+
+          <div id="security-metadata-box" style="background: var(--bg-subtle); padding: 0.85rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.85rem;">
+            Loading credential security status...
+          </div>
+
+          <form id="change-passcode-form" autocomplete="off">
+            <div class="form-group">
+              <label class="form-label" for="sec-target-role">Credential to Update</label>
+              <select id="sec-target-role" required>
+                <option value="teacher_pin">Teacher App PIN (Used by all active teachers)</option>
+                <option value="leading_teacher">Leading Teacher Dashboard Passcode</option>
+                <option value="principal">Principal Dashboard Passcode</option>
+                <option value="admin">Administrator Dashboard Passcode</option>
+              </select>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="sec-new-passcode">New Passcode / PIN</label>
+                <input type="password" id="sec-new-passcode" placeholder="Min 6 chars (4+ for Teacher PIN)" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="sec-confirm-passcode">Confirm New Passcode / PIN</label>
+                <input type="password" id="sec-confirm-passcode" placeholder="Re-enter new credential" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="sec-current-admin-passcode">Authorize with Current Administrator Passcode</label>
+              <input type="password" id="sec-current-admin-passcode" placeholder="Enter your current Admin passcode to authorize" required>
+            </div>
+            <button type="submit" id="btn-change-passcode" class="btn btn-danger">Update Credential &amp; Rotate Session Secret</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- TAB 10: MOVEMENT REPORTS & ANALYTICS -->
+      <section id="tab-reports" class="tab-panel">
+        <div class="card no-print">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Movement Reports &amp; Analytics Filters</h2>
+              <p class="card-subtitle">Filter by date preset or custom range, class, destination, status, and student.</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" id="btn-export-report-csv" class="btn btn-secondary btn-sm">Export Filtered CSV</button>
+              <button type="button" id="btn-print-report" class="btn btn-secondary btn-sm">Print Report</button>
+              <button type="button" id="btn-run-report" class="btn btn-primary btn-sm">Generate Report</button>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="rep-date-range">Date Range Preset</label>
+              <select id="rep-date-range">
+                <option value="all">All Dates</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="this_week">This Week</option>
+                <option value="this_month">This Month</option>
+                <option value="custom">Custom Date Range</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rep-start-date">Custom Start Date</label>
+              <input type="date" id="rep-start-date">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rep-end-date">Custom End Date</label>
+              <input type="date" id="rep-end-date">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rep-class">Filter Class</label>
+              <select id="rep-class"><option value="">All Classes</option></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rep-destination">Filter Destination</label>
+              <select id="rep-destination"><option value="">All Destinations</option></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rep-status">Movement Status</label>
+              <select id="rep-status">
+                <option value="">All Statuses</option>
+                <option value="OUT">Currently OUT</option>
+                <option value="RETURNED">Returned</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rep-search">Search Student (Name / ID)</label>
+              <input type="search" id="rep-search" placeholder="Student name or ID...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Analytics Summary Metrics -->
+        <div class="stats-grid">
+          <div class="stat-card stat-primary">
+            <span class="stat-label">Total Movements</span>
+            <span class="stat-value" id="rep-stat-total">0</span>
+          </div>
+          <div class="stat-card stat-warning">
+            <span class="stat-label">Currently OUT</span>
+            <span class="stat-value" id="rep-stat-out">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Returned Count</span>
+            <span class="stat-value" id="rep-stat-returned">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Average Duration</span>
+            <span class="stat-value" id="rep-stat-avg">0m</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Maximum Duration</span>
+            <span class="stat-value" id="rep-stat-max">0m</span>
+          </div>
+          <div class="stat-card stat-critical">
+            <span class="stat-label">Critical Movements (≥15m)</span>
+            <span class="stat-value" id="rep-stat-critical">0</span>
+          </div>
+        </div>
+
+        <!-- Breakdown Tables: By Destination, By Class, and Repeated Students -->
+        <div class="form-grid" style="margin-bottom: 1.25rem;">
+          <div class="card" style="margin-bottom: 0;">
+            <h3 class="card-title" style="margin-bottom: 0.75rem;">Movements by Destination</h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th>Destination</th><th>Count</th></tr></thead>
+                <tbody id="rep-by-destination-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom: 0;">
+            <h3 class="card-title" style="margin-bottom: 0.75rem;">Movements by Class</h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th>Class</th><th>Count</th></tr></thead>
+                <tbody id="rep-by-class-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom: 0;">
+            <h3 class="card-title" style="margin-bottom: 0.75rem;">Repeated Movements by Student</h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead><tr><th>Student</th><th>Class</th><th>Count</th><th>Total Mins</th><th>Critical</th></tr></thead>
+                <tbody id="rep-repeated-students-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Read-Only Movement Records Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Detailed Movement Records (Read-Only)</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Movement ID</th>
+                  <th>Student</th>
+                  <th>Class</th>
+                  <th>Destination</th>
+                  <th>Teacher</th>
+                  <th>Time Out</th>
+                  <th>Time In</th>
+                  <th>Duration</th>
+                  <th>Attention</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="rep-records-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/admin-dashboard.js"></script>
+</body>
+</html>
