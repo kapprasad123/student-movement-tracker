@@ -21,7 +21,8 @@
     },
     securityMeta: null,
     reportData: null,
-    bulkPreview: null
+    bulkPreview: null,
+    bulkTeacherPreview: null
   };
 
   var els = {};
@@ -152,16 +153,16 @@
     tbody.innerHTML = recent.map(function (r) {
       var rowCls = r.attentionLevel === 'Critical' ? 'row-critical' : (r.attentionLevel === 'Warning' ? 'row-warning' : '');
       return '<tr class="' + rowCls + '">' +
-        '<td><small>' + SMT_UTILS.escapeHtml(r.MovementID) + '</small></td>' +
-        '<td><strong>' + SMT_UTILS.escapeHtml(r.StudentName) + '</strong> (' + SMT_UTILS.escapeHtml(r.StudentID) + ')</td>' +
-        '<td>' + SMT_UTILS.escapeHtml(r.ClassName) + '</td>' +
-        '<td>' + SMT_UTILS.escapeHtml(r.Destination) + '</td>' +
-        '<td>' + SMT_UTILS.escapeHtml(r.TeacherName) + '</td>' +
-        '<td>' + SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeOut, r.MovementID)) + '</td>' +
-        '<td>' + (r.TimeIn ? SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeIn)) : '—') + '</td>' +
-        '<td><strong>' + SMT_UTILS.escapeHtml(r.formattedDuration) + '</strong></td>' +
-        '<td>' + SMT_UTILS.attentionBadgeHtml(r.attentionLevel) + '</td>' +
-        '<td><span class="badge ' + (r.Status === 'OUT' ? 'badge-warning' : 'badge-active') + '">' + SMT_UTILS.escapeHtml(r.Status) + '</span></td>' +
+        '<td data-label="Movement ID"><small>' + SMT_UTILS.escapeHtml(r.MovementID) + '</small></td>' +
+        '<td data-label="Student"><strong>' + SMT_UTILS.escapeHtml(r.StudentName) + '</strong> (' + SMT_UTILS.escapeHtml(r.StudentID) + ')</td>' +
+        '<td data-label="Class">' + SMT_UTILS.escapeHtml(r.ClassName) + '</td>' +
+        '<td data-label="Destination">' + SMT_UTILS.escapeHtml(r.Destination) + '</td>' +
+        '<td data-label="Teacher">' + SMT_UTILS.escapeHtml(r.TeacherName) + '</td>' +
+        '<td data-label="Checkout">' + SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeOut, r.MovementID)) + '</td>' +
+        '<td data-label="Returned">' + (r.TimeIn ? SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeIn)) : '—') + '</td>' +
+        '<td data-label="Duration"><strong>' + SMT_UTILS.escapeHtml(r.formattedDuration) + '</strong></td>' +
+        '<td data-label="Attention">' + SMT_UTILS.attentionBadgeHtml(r.attentionLevel) + '</td>' +
+        '<td data-label="Status"><span class="badge ' + (r.Status === 'OUT' ? 'badge-warning' : 'badge-active') + '">' + SMT_UTILS.escapeHtml(r.Status) + '</span></td>' +
         '</tr>';
     }).join('');
   }
@@ -223,16 +224,16 @@
     tbody.innerHTML = filtered.map(function (s) {
       var isAct = s.Status.toLowerCase() === 'active';
       return '<tr>' +
-        '<td><strong>' + SMT_UTILS.escapeHtml(s.StudentID) + '</strong></td>' +
-        '<td>' + SMT_UTILS.escapeHtml(s.StudentName) + '</td>' +
-        '<td>' + SMT_UTILS.escapeHtml(s.ClassName) + ' <small style="color:var(--text-muted)">(' + SMT_UTILS.escapeHtml(s.ClassID) + ')</small></td>' +
-        '<td><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(s.Status) + '</span></td>' +
-        '<td>' + (s.isCurrentlyOut ? '<span class="badge badge-warning">Currently OUT</span>' : '<span style="color:var(--text-muted)">In Class</span>') + '</td>' +
-        '<td>' +
+        '<td data-label="Student ID"><strong>' + SMT_UTILS.escapeHtml(s.StudentID) + '</strong></td>' +
+        '<td data-label="Student Name">' + SMT_UTILS.escapeHtml(s.StudentName) + '</td>' +
+        '<td data-label="Class">' + SMT_UTILS.escapeHtml(s.ClassName) + ' <small style="color:var(--text-muted)">(' + SMT_UTILS.escapeHtml(s.ClassID) + ')</small></td>' +
+        '<td data-label="Status"><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(s.Status) + '</span></td>' +
+        '<td data-label="Movement State">' + (s.isCurrentlyOut ? '<span class="badge badge-warning">Currently OUT</span>' : '<span style="color:var(--text-muted)">In Class</span>') + '</td>' +
+        '<td data-label="Actions"><div>' +
         '  <button type="button" class="btn btn-secondary btn-sm btn-edit-student" data-id="' + SMT_UTILS.escapeHtml(s.StudentID) + '">Edit</button> ' +
         '  <button type="button" class="btn ' + (isAct ? 'btn-danger' : 'btn-success') + ' btn-sm btn-toggle-student" data-id="' + SMT_UTILS.escapeHtml(s.StudentID) + '" data-next="' + (isAct ? 'Inactive' : 'Active') + '">' +
         (isAct ? 'Deactivate' : 'Activate') + '</button>' +
-        '</td>' +
+        '</div></td>' +
         '</tr>';
     }).join('');
   }
@@ -254,21 +255,21 @@
     tbody.innerHTML = filtered.map(function (c) {
       var isAct = c.Status.toLowerCase() === 'active';
       return '<tr>' +
-        '<td><strong>' + SMT_UTILS.escapeHtml(c.ClassID) + '</strong></td>' +
-        '<td>' + SMT_UTILS.escapeHtml(c.ClassName) + '</td>' +
-        '<td><strong>' + c.activeEnrolledCount + '</strong></td>' +
-        '<td>' + c.enrolledCount + '</td>' +
-        '<td><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(c.Status) + '</span></td>' +
-        '<td>' +
+        '<td data-label="Class ID"><strong>' + SMT_UTILS.escapeHtml(c.ClassID) + '</strong></td>' +
+        '<td data-label="Class Name">' + SMT_UTILS.escapeHtml(c.ClassName) + '</td>' +
+        '<td data-label="Active Students"><strong>' + c.activeEnrolledCount + '</strong></td>' +
+        '<td data-label="Total Students">' + c.enrolledCount + '</td>' +
+        '<td data-label="Status"><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(c.Status) + '</span></td>' +
+        '<td data-label="Actions"><div>' +
         '  <button type="button" class="btn btn-secondary btn-sm btn-edit-class" data-id="' + SMT_UTILS.escapeHtml(c.ClassID) + '">Edit / Rename</button> ' +
         '  <button type="button" class="btn ' + (isAct ? 'btn-danger' : 'btn-success') + ' btn-sm btn-toggle-class" data-id="' + SMT_UTILS.escapeHtml(c.ClassID) + '" data-name="' + SMT_UTILS.escapeHtml(c.ClassName) + '" data-enrolled="' + c.activeEnrolledCount + '" data-next="' + (isAct ? 'Inactive' : 'Active') + '">' +
         (isAct ? 'Deactivate' : 'Activate') + '</button>' +
-        '</td>' +
+        '</div></td>' +
         '</tr>';
     }).join('');
   }
 
-  // 4. TEACHERS RENDERER
+  // 4. TEACHERS & BULK TEACHER IMPORT RENDERER
   function renderTeachersTab() {
     var activeTeachers = state.teachers.filter(function (t) { return t.Status.toLowerCase() === 'active'; });
     document.getElementById('tasg-select-teacher').innerHTML = ['<option value="">— Select Teacher —</option>'].concat(
@@ -277,28 +278,35 @@
       })
     ).join('');
 
+    var searchEl = document.getElementById('tch-filter-search');
+    var search = searchEl ? String(searchEl.value || '').trim().toLowerCase() : '';
+    var filtered = state.teachers.filter(function (t) {
+      if (!search) return true;
+      return t.TeacherName.toLowerCase().indexOf(search) !== -1 || t.TeacherID.toLowerCase().indexOf(search) !== -1;
+    });
+
     var tbody = document.getElementById('admin-teachers-tbody');
-    if (state.teachers.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No teachers configured yet.</td></tr>';
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No matching teachers found.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = state.teachers.map(function (t) {
+    tbody.innerHTML = filtered.map(function (t) {
       var isAct = t.Status.toLowerCase() === 'active';
       var classesBadges = (t.assignedClasses || []).map(function (ac) {
         return '<span class="badge badge-normal" style="margin-right:0.25rem;">' + SMT_UTILS.escapeHtml(ac.ClassName) + '</span>';
       }).join('') || '<span style="color:var(--text-muted)">None assigned</span>';
 
       return '<tr>' +
-        '<td><strong>' + SMT_UTILS.escapeHtml(t.TeacherID) + '</strong></td>' +
-        '<td>' + SMT_UTILS.escapeHtml(t.TeacherName) + '</td>' +
-        '<td>' + classesBadges + '</td>' +
-        '<td><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(t.Status) + '</span></td>' +
-        '<td>' +
+        '<td data-label="Teacher ID"><strong>' + SMT_UTILS.escapeHtml(t.TeacherID) + '</strong></td>' +
+        '<td data-label="Teacher Name">' + SMT_UTILS.escapeHtml(t.TeacherName) + '</td>' +
+        '<td data-label="Assigned Classes"><div>' + classesBadges + '</div></td>' +
+        '<td data-label="Status"><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(t.Status) + '</span></td>' +
+        '<td data-label="Actions"><div>' +
         '  <button type="button" class="btn btn-secondary btn-sm btn-edit-teacher" data-id="' + SMT_UTILS.escapeHtml(t.TeacherID) + '">Edit</button> ' +
         '  <button type="button" class="btn ' + (isAct ? 'btn-danger' : 'btn-success') + ' btn-sm btn-toggle-teacher" data-id="' + SMT_UTILS.escapeHtml(t.TeacherID) + '" data-next="' + (isAct ? 'Inactive' : 'Active') + '">' +
         (isAct ? 'Deactivate' : 'Activate') + '</button>' +
-        '</td>' +
+        '</div></td>' +
         '</tr>';
     }).join('');
   }
@@ -326,15 +334,15 @@
       }).join('') || '<span style="color:var(--text-muted)">No active classes</span>';
 
       return '<tr>' +
-        '<td><strong>' + SMT_UTILS.escapeHtml(lt.LeadingTeacherID) + '</strong></td>' +
-        '<td>' + SMT_UTILS.escapeHtml(lt.LeadingTeacherName) + '</td>' +
-        '<td>' + badges + '</td>' +
-        '<td><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(lt.Status) + '</span></td>' +
-        '<td>' +
+        '<td data-label="LT ID"><strong>' + SMT_UTILS.escapeHtml(lt.LeadingTeacherID) + '</strong></td>' +
+        '<td data-label="Name">' + SMT_UTILS.escapeHtml(lt.LeadingTeacherName) + '</td>' +
+        '<td data-label="Assigned Classes"><div>' + badges + '</div></td>' +
+        '<td data-label="Status"><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(lt.Status) + '</span></td>' +
+        '<td data-label="Actions"><div>' +
         '  <button type="button" class="btn btn-secondary btn-sm btn-edit-lt" data-id="' + SMT_UTILS.escapeHtml(lt.LeadingTeacherID) + '">Edit</button> ' +
         '  <button type="button" class="btn ' + (isAct ? 'btn-danger' : 'btn-success') + ' btn-sm btn-toggle-lt" data-id="' + SMT_UTILS.escapeHtml(lt.LeadingTeacherID) + '" data-next="' + (isAct ? 'Inactive' : 'Active') + '">' +
         (isAct ? 'Deactivate' : 'Activate') + '</button>' +
-        '</td>' +
+        '</div></td>' +
         '</tr>';
     }).join('');
   }
@@ -349,12 +357,12 @@
     tbody.innerHTML = state.teachingAssignments.map(function (a) {
       var isAct = a.Status.toLowerCase() === 'active';
       return '<tr>' +
-        '<td><small>' + SMT_UTILS.escapeHtml(a.AssignmentID) + '</small></td>' +
-        '<td><strong>' + SMT_UTILS.escapeHtml(a.TeacherName) + '</strong> (' + SMT_UTILS.escapeHtml(a.TeacherID) + ')</td>' +
-        '<td>' + SMT_UTILS.escapeHtml(a.ClassName) + ' (' + SMT_UTILS.escapeHtml(a.ClassID) + ')</td>' +
-        '<td><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(a.Status) + '</span></td>' +
-        '<td><small>' + SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(a.UpdatedAt || a.CreatedAt)) + '</small></td>' +
-        '<td>' +
+        '<td data-label="Assignment ID"><small>' + SMT_UTILS.escapeHtml(a.AssignmentID) + '</small></td>' +
+        '<td data-label="Teacher"><strong>' + SMT_UTILS.escapeHtml(a.TeacherName) + '</strong> (' + SMT_UTILS.escapeHtml(a.TeacherID) + ')</td>' +
+        '<td data-label="Class">' + SMT_UTILS.escapeHtml(a.ClassName) + ' (' + SMT_UTILS.escapeHtml(a.ClassID) + ')</td>' +
+        '<td data-label="Status"><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(a.Status) + '</span></td>' +
+        '<td data-label="Updated"><small>' + SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(a.UpdatedAt || a.CreatedAt)) + '</small></td>' +
+        '<td data-label="Actions">' +
         '  <button type="button" class="btn ' + (isAct ? 'btn-danger' : 'btn-success') + ' btn-sm btn-toggle-tasg" data-id="' + SMT_UTILS.escapeHtml(a.AssignmentID) + '" data-next="' + (isAct ? 'Inactive' : 'Active') + '">' +
         (isAct ? 'Deactivate' : 'Activate') + '</button>' +
         '</td>' +
@@ -372,12 +380,12 @@
     tbody.innerHTML = state.ltAssignments.map(function (a) {
       var isAct = a.Status.toLowerCase() === 'active';
       return '<tr>' +
-        '<td><small>' + SMT_UTILS.escapeHtml(a.AssignmentID) + '</small></td>' +
-        '<td><strong>' + SMT_UTILS.escapeHtml(a.LeadingTeacherName) + '</strong> (' + SMT_UTILS.escapeHtml(a.LeadingTeacherID) + ')</td>' +
-        '<td>' + SMT_UTILS.escapeHtml(a.ClassName) + ' (' + SMT_UTILS.escapeHtml(a.ClassID) + ')</td>' +
-        '<td>' + SMT_UTILS.escapeHtml(a.Period) + '</td>' +
-        '<td><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(a.Status) + '</span></td>' +
-        '<td>' +
+        '<td data-label="Assignment ID"><small>' + SMT_UTILS.escapeHtml(a.AssignmentID) + '</small></td>' +
+        '<td data-label="Leading Teacher"><strong>' + SMT_UTILS.escapeHtml(a.LeadingTeacherName) + '</strong> (' + SMT_UTILS.escapeHtml(a.LeadingTeacherID) + ')</td>' +
+        '<td data-label="Class">' + SMT_UTILS.escapeHtml(a.ClassName) + ' (' + SMT_UTILS.escapeHtml(a.ClassID) + ')</td>' +
+        '<td data-label="Period">' + SMT_UTILS.escapeHtml(a.Period) + '</td>' +
+        '<td data-label="Status"><span class="badge ' + (isAct ? 'badge-active' : 'badge-inactive') + '">' + SMT_UTILS.escapeHtml(a.Status) + '</span></td>' +
+        '<td data-label="Actions">' +
         '  <button type="button" class="btn ' + (isAct ? 'btn-danger' : 'btn-success') + ' btn-sm btn-toggle-ltasg" data-id="' + SMT_UTILS.escapeHtml(a.AssignmentID) + '" data-next="' + (isAct ? 'Inactive' : 'Active') + '">' +
         (isAct ? 'Deactivate' : 'Activate') + '</button>' +
         '</td>' +
@@ -489,16 +497,16 @@
       ? records.map(function (r) {
           var rowCls = r.attentionLevel === 'Critical' ? 'row-critical' : (r.attentionLevel === 'Warning' ? 'row-warning' : '');
           return '<tr class="' + rowCls + '">' +
-            '<td><small>' + SMT_UTILS.escapeHtml(r.MovementID) + '</small></td>' +
-            '<td><strong>' + SMT_UTILS.escapeHtml(r.StudentName) + '</strong> (' + SMT_UTILS.escapeHtml(r.StudentID) + ')</td>' +
-            '<td>' + SMT_UTILS.escapeHtml(r.ClassName) + '</td>' +
-            '<td>' + SMT_UTILS.escapeHtml(r.Destination) + '</td>' +
-            '<td>' + SMT_UTILS.escapeHtml(r.TeacherName) + '</td>' +
-            '<td>' + SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeOut, r.MovementID)) + '</td>' +
-            '<td>' + (r.TimeIn ? SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeIn)) : '—') + '</td>' +
-            '<td><strong>' + SMT_UTILS.escapeHtml(r.formattedDuration) + '</strong></td>' +
-            '<td>' + SMT_UTILS.attentionBadgeHtml(r.attentionLevel) + '</td>' +
-            '<td><span class="badge ' + (r.Status === 'OUT' ? 'badge-warning' : 'badge-active') + '">' + SMT_UTILS.escapeHtml(r.Status) + '</span></td>' +
+            '<td data-label="Movement ID"><small>' + SMT_UTILS.escapeHtml(r.MovementID) + '</small></td>' +
+            '<td data-label="Student"><strong>' + SMT_UTILS.escapeHtml(r.StudentName) + '</strong> (' + SMT_UTILS.escapeHtml(r.StudentID) + ')</td>' +
+            '<td data-label="Class">' + SMT_UTILS.escapeHtml(r.ClassName) + '</td>' +
+            '<td data-label="Destination">' + SMT_UTILS.escapeHtml(r.Destination) + '</td>' +
+            '<td data-label="Teacher">' + SMT_UTILS.escapeHtml(r.TeacherName) + '</td>' +
+            '<td data-label="Time Out">' + SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeOut, r.MovementID)) + '</td>' +
+            '<td data-label="Time In">' + (r.TimeIn ? SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeIn)) : '—') + '</td>' +
+            '<td data-label="Duration"><strong>' + SMT_UTILS.escapeHtml(r.formattedDuration) + '</strong></td>' +
+            '<td data-label="Attention">' + SMT_UTILS.attentionBadgeHtml(r.attentionLevel) + '</td>' +
+            '<td data-label="Status"><span class="badge ' + (r.Status === 'OUT' ? 'badge-warning' : 'badge-active') + '">' + SMT_UTILS.escapeHtml(r.Status) + '</span></td>' +
             '</tr>';
         }).join('')
       : '<tr><td colspan="10" class="empty-state">No movement records match the selected report filters.</td></tr>';
@@ -509,38 +517,11 @@
 
     els.endpointForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      var url = String(els.inputWebAppUrl.value || '').trim();
-      SMT_CONFIG.setWebAppUrl(url);
-      SMT_UTILS.showToast('Updated shared endpoint configuration', 'success');
+      SMT_CONFIG.setWebAppUrl(els.inputWebAppUrl.value);
       if (SMT_API.getSession('admin')) {
         loadAllAdminData();
       }
     });
-
-    var btnProd = document.getElementById('btn-use-production-endpoint');
-    if (btnProd) {
-      btnProd.addEventListener('click', function () {
-        var prodUrl = SMT_CONFIG.resetToDefault();
-        els.inputWebAppUrl.value = prodUrl;
-        SMT_UTILS.showToast('Reset shared endpoint to Production Web App', 'info');
-        if (SMT_API.getSession('admin')) {
-          loadAllAdminData();
-        }
-      });
-    }
-
-    var btnLocal = document.getElementById('btn-use-local-endpoint');
-    if (btnLocal) {
-      btnLocal.addEventListener('click', function () {
-        var localUrl = SMT_CONFIG.LOCAL_DEV_URL || 'http://localhost:3000/api';
-        SMT_CONFIG.setWebAppUrl(localUrl);
-        els.inputWebAppUrl.value = localUrl;
-        SMT_UTILS.showToast('Switched shared endpoint to Local Test Proxy', 'info');
-        if (SMT_API.getSession('admin')) {
-          loadAllAdminData();
-        }
-      });
-    }
 
     els.loginForm.addEventListener('submit', async function (e) {
       e.preventDefault();
@@ -644,7 +625,7 @@
         document.getElementById('student-form-heading').textContent = 'Edit Student (' + stu.StudentID + ')';
         var idInput = document.getElementById('stu-input-id');
         idInput.value = stu.StudentID;
-        idInput.readOnly = true; // Never silently change an existing Student ID
+        idInput.readOnly = true;
         document.getElementById('stu-input-name').value = stu.StudentName;
         document.getElementById('stu-select-class').value = stu.ClassID;
         document.getElementById('stu-select-status').value = stu.Status;
@@ -673,15 +654,21 @@
       }
     });
 
-    // BULK STUDENT CSV IMPORT
+    // BULK STUDENT CSV / EXCEL IMPORT
+    document.getElementById('btn-download-student-template').addEventListener('click', function () {
+      var sample = 'StudentID,StudentName,Class\r\nSTU-2001,Mohamed Rasheed,Grade 10A\r\nSTU-2002,Mariyam Niuma,Grade 10B\r\n';
+      SMT_UTILS.downloadCsvFile('sample-students-import.csv', sample);
+    });
+
     document.getElementById('bulk-csv-file').addEventListener('change', function (e) {
       var file = e.target.files && e.target.files[0];
       if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function (evt) {
-        document.getElementById('bulk-paste-textarea').value = String(evt.target.result || '');
-      };
-      reader.readAsText(file);
+      SMT_UTILS.readSpreadsheetFileAsText(file).then(function (text) {
+        document.getElementById('bulk-paste-textarea').value = text;
+        SMT_UTILS.showToast('Loaded file "' + file.name + '". Click Validate & Preview Import.', 'info');
+      }).catch(function (err) {
+        SMT_UTILS.showToast(err.message || 'Could not read spreadsheet file', 'error');
+      });
     });
 
     document.getElementById('btn-preview-bulk').addEventListener('click', function () {
@@ -835,7 +822,12 @@
       }
     });
 
-    // TEACHER CRUD
+    // TEACHER CRUD & BULK TEACHER IMPORT (CSV / EXCEL)
+    var tchSearchEl = document.getElementById('tch-filter-search');
+    if (tchSearchEl) {
+      tchSearchEl.addEventListener('input', renderTeachersTab);
+    }
+
     var resetTeacherForm = function () {
       document.getElementById('teacher-edit-mode').value = 'add';
       document.getElementById('teacher-form-heading').textContent = 'Add / Edit Teacher Profile';
@@ -866,6 +858,97 @@
       } catch (err) {
         SMT_UTILS.showToast(err.message || 'Failed saving teacher', 'error');
       }
+    });
+
+    document.getElementById('btn-download-teacher-template').addEventListener('click', function () {
+      var sample = [
+        'TeacherID,TeacherName,Classes,Status',
+        'TCH-101,Ahmed Naseer,Grade 10A; Grade 10B,Active',
+        'TCH-102,Aminath Rasheeda,Grade 10A,Active',
+        'TCH-103,Ibrahim Shareef,,Active'
+      ].join('\r\n');
+      SMT_UTILS.downloadCsvFile('sample-teachers-import.csv', sample);
+    });
+
+    document.getElementById('bulk-teacher-file').addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      SMT_UTILS.readSpreadsheetFileAsText(file).then(function (text) {
+        document.getElementById('bulk-teacher-textarea').value = text;
+        SMT_UTILS.showToast('Loaded "' + file.name + '". Click Validate & Preview Teachers.', 'info');
+      }).catch(function (err) {
+        SMT_UTILS.showToast(err.message || 'Could not read teacher spreadsheet file', 'error');
+      });
+    });
+
+    document.getElementById('btn-preview-bulk-teachers').addEventListener('click', function () {
+      var raw = document.getElementById('bulk-teacher-textarea').value;
+      var preview = SMT_UTILS.parseAndValidateTeacherImport(raw, state.teachers, state.classes);
+      state.bulkTeacherPreview = preview;
+
+      document.getElementById('bulk-teacher-preview-container').style.display = 'block';
+      document.getElementById('bulk-tch-valid-count').textContent = String(preview.valid.length);
+      document.getElementById('bulk-tch-skipped-count').textContent = String(preview.skipped.length);
+      document.getElementById('bulk-tch-invalid-count').textContent = String(preview.invalid.length);
+      document.getElementById('bulk-tch-valid-label').textContent = String(preview.valid.length);
+
+      var issues = preview.skipped.concat(preview.invalid);
+      document.getElementById('bulk-tch-issues-label').textContent = String(issues.length);
+
+      document.getElementById('bulk-tch-valid-tbody').innerHTML = preview.valid.length
+        ? preview.valid.map(function (v) {
+            var clsText = (v.classNames && v.classNames.length > 0) ? SMT_UTILS.escapeHtml(v.classNames.join(', ')) : '<span style="color:var(--text-muted)">—</span>';
+            return '<tr><td>' + v.rowNumber + '</td><td><strong>' + SMT_UTILS.escapeHtml(v.teacherId) + '</strong></td><td>' + SMT_UTILS.escapeHtml(v.teacherName) + '</td><td>' + clsText + '</td></tr>';
+          }).join('')
+        : '<tr><td colspan="4" class="empty-state">No valid teacher rows to import.</td></tr>';
+
+      document.getElementById('bulk-tch-issues-tbody').innerHTML = issues.length
+        ? issues.map(function (iss) {
+            return '<tr><td>' + iss.rowNumber + '</td><td>' + SMT_UTILS.escapeHtml(iss.teacherId || '—') + '</td><td>' + SMT_UTILS.escapeHtml(iss.reason) + '</td></tr>';
+          }).join('')
+        : '<tr><td colspan="3" class="empty-state">No invalid or skipped rows.</td></tr>';
+
+      var confirmBtn = document.getElementById('btn-confirm-bulk-teachers');
+      confirmBtn.disabled = preview.valid.length === 0;
+      confirmBtn.textContent = 'Confirm & Import Valid Teachers (' + preview.valid.length + ')';
+    });
+
+    document.getElementById('btn-confirm-bulk-teachers').addEventListener('click', async function () {
+      if (!state.bulkTeacherPreview || state.bulkTeacherPreview.valid.length === 0) return;
+      var ok = await SMT_UTILS.confirmDialog({
+        title: 'Confirm Bulk Teacher Import',
+        message: 'Import ' + state.bulkTeacherPreview.valid.length + ' validated teacher(s) into Google Sheets? Existing teachers and Movement_Log will not be modified.',
+        confirmText: 'Import ' + state.bulkTeacherPreview.valid.length + ' Teachers'
+      });
+      if (!ok) return;
+
+      try {
+        var res = await SMT_API.post('bulkAddTeachers', {
+          teachers: state.bulkTeacherPreview.valid
+        }, { role: 'admin' });
+        var d = res.data || {};
+        document.getElementById('bulk-teacher-result-summary').textContent =
+          'Teacher Import Summary: ' + (d.addedCount || 0) + ' teachers added, ' +
+          (d.assignmentsCreatedCount || 0) + ' class assignments created, ' +
+          ((d.skippedCount || 0) + state.bulkTeacherPreview.skipped.length) + ' skipped (existing), ' +
+          ((d.invalidCount || 0) + state.bulkTeacherPreview.invalid.length) + ' invalid.';
+        SMT_UTILS.showToast(res.message || 'Bulk teacher import completed', 'success');
+        document.getElementById('btn-confirm-bulk-teachers').disabled = true;
+        await loadAllAdminData();
+      } catch (err) {
+        SMT_UTILS.showToast(err.message || 'Bulk teacher import failed', 'error');
+      }
+    });
+
+    document.getElementById('btn-clear-bulk-teachers').addEventListener('click', function () {
+      state.bulkTeacherPreview = null;
+      document.getElementById('bulk-teacher-file').value = '';
+      document.getElementById('bulk-teacher-textarea').value = '';
+      document.getElementById('bulk-teacher-preview-container').style.display = 'none';
+      document.getElementById('bulk-teacher-result-summary').textContent = '';
+      var confirmBtn = document.getElementById('btn-confirm-bulk-teachers');
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Confirm & Import Valid Teachers (0)';
     });
 
     document.getElementById('admin-teachers-tbody').addEventListener('click', async function (e) {

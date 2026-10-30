@@ -36,17 +36,14 @@
   </header>
 
   <main class="main-container">
-    <!-- Central Google Apps Script Endpoint Configuration Bar -->
-    <section id="endpoint-config-banner" class="config-banner admin-endpoint-banner">
+    <section id="endpoint-config-banner" class="config-banner">
       <div class="config-banner-text">
-        <strong>Central Google Apps Script Endpoint:</strong>
-        <span id="endpoint-banner-hint">Shared backend for all four dashboards. Defaults to the production Google Apps Script Web App.</span>
+        <strong>Google Apps Script Web App Endpoint:</strong>
+        <span>Connect your deployed Google Apps Script Web App URL (or local test endpoint) to manage live Google Sheets data.</span>
       </div>
       <form id="endpoint-config-form" class="config-banner-form">
         <input type="text" id="input-webapp-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" aria-label="Google Apps Script Web App URL" style="max-width: 420px;">
-        <button type="submit" class="btn btn-primary btn-sm" id="btn-save-endpoint">Apply Endpoint</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-use-production-endpoint">Use Production</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-use-local-endpoint">Use Local Test Proxy</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save &amp; Connect</button>
       </form>
     </section>
 
@@ -76,7 +73,7 @@
           <button type="button" class="tab-btn active" role="tab" data-admin-tab="overview">1. Overview</button>
           <button type="button" class="tab-btn" role="tab" data-admin-tab="students">2. Students &amp; Bulk Import</button>
           <button type="button" class="tab-btn" role="tab" data-admin-tab="classes">3. Classes</button>
-          <button type="button" class="tab-btn" role="tab" data-admin-tab="teachers">4. Teachers</button>
+          <button type="button" class="tab-btn" role="tab" data-admin-tab="teachers">4. Teachers &amp; Bulk Import</button>
           <button type="button" class="tab-btn" role="tab" data-admin-tab="leading-teachers">5. Leading Teachers</button>
           <button type="button" class="tab-btn" role="tab" data-admin-tab="teaching-assignments">6. Teaching Assignments</button>
           <button type="button" class="tab-btn" role="tab" data-admin-tab="lt-assignments">7. LT Class Assignments</button>
@@ -130,7 +127,7 @@
             <button type="button" id="btn-refresh-overview" class="btn btn-secondary btn-sm">Refresh Overview</button>
           </div>
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table mobile-card-table">
               <thead>
                 <tr>
                   <th>Movement ID</th>
@@ -153,7 +150,7 @@
         </div>
       </section>
 
-      <!-- TAB 2: STUDENT MANAGEMENT & BULK CSV IMPORT -->
+      <!-- TAB 2: STUDENT MANAGEMENT & BULK CSV/EXCEL IMPORT -->
       <section id="tab-students" class="tab-panel">
         <div class="card">
           <div class="card-header">
@@ -193,22 +190,23 @@
           </form>
         </div>
 
-        <!-- Bulk CSV / Tabular Paste Student Import -->
+        <!-- Bulk CSV / Excel Student Import -->
         <div class="card">
           <div class="card-header">
             <div>
-              <h2 class="card-title">Bulk Student Import (CSV File or Pasted Tabular Data)</h2>
+              <h2 class="card-title">Bulk Student Import (CSV, Excel .xlsx, or Pasted Excel Cells)</h2>
               <p class="card-subtitle">Supports aliases (StudentID/ID, StudentName/Name, ClassID/ClassName/Grade). Preview validates rows before writing.</p>
             </div>
+            <button type="button" id="btn-download-student-template" class="btn btn-secondary btn-sm">Download Sample CSV Template</button>
           </div>
 
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label" for="bulk-csv-file">Upload CSV File</label>
-              <input type="file" id="bulk-csv-file" accept=".csv,.tsv,.txt" class="form-control">
+              <label class="form-label" for="bulk-csv-file">Upload CSV or Excel (.xlsx) File</label>
+              <input type="file" id="bulk-csv-file" accept=".csv,.tsv,.txt,.xlsx" class="form-control">
             </div>
             <div class="form-group" style="grid-column: span 2;">
-              <label class="form-label" for="bulk-paste-textarea">Or Paste CSV / Spreadsheet Rows (StudentID, StudentName, Class)</label>
+              <label class="form-label" for="bulk-paste-textarea">Or Paste Excel / CSV Rows (StudentID, StudentName, Class)</label>
               <textarea id="bulk-paste-textarea" rows="4" placeholder="StudentID,StudentName,Class&#10;STU-2001,Mohamed Rasheed,Grade 10A&#10;STU-2002,Mariyam Niuma,Grade 10B"></textarea>
             </div>
           </div>
@@ -286,7 +284,7 @@
             </div>
           </div>
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table mobile-card-table">
               <thead>
                 <tr>
                   <th>Student ID</th>
@@ -343,7 +341,7 @@
             <input type="search" id="cls-filter-search" placeholder="Search classes..." style="max-width: 260px;">
           </div>
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table mobile-card-table">
               <thead>
                 <tr>
                   <th>Class ID</th>
@@ -360,7 +358,7 @@
         </div>
       </section>
 
-      <!-- TAB 4: TEACHER MANAGEMENT -->
+      <!-- TAB 4: TEACHER MANAGEMENT & BULK TEACHER IMPORT (CSV / EXCEL) -->
       <section id="tab-teachers" class="tab-panel">
         <div class="card">
           <div class="card-header">
@@ -394,12 +392,82 @@
           </form>
         </div>
 
+        <!-- Bulk Teacher Import (CSV / Excel .xlsx / Copy-Paste for 60+ Teachers) -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Bulk Teacher Import (CSV, Excel .xlsx, or Pasted Excel Cells)</h2>
+              <p class="card-subtitle">
+                Quickly onboard 60+ teachers at once. Supports columns: <strong>TeacherID</strong> (or auto-generated if blank), <strong>TeacherName</strong>, and optional <strong>Classes</strong> (e.g., <code>Grade 10A; Grade 10B</code>).
+              </p>
+            </div>
+            <button type="button" id="btn-download-teacher-template" class="btn btn-secondary btn-sm">Download Sample Teacher CSV</button>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="bulk-teacher-file">Upload Teacher CSV or Excel (.xlsx) File</label>
+              <input type="file" id="bulk-teacher-file" accept=".csv,.tsv,.txt,.xlsx" class="form-control">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label" for="bulk-teacher-textarea">Or Paste Teacher Rows from Excel / CSV (TeacherID, TeacherName, Optional Classes)</label>
+              <textarea id="bulk-teacher-textarea" rows="4" placeholder="TeacherID,TeacherName,Classes&#10;TCH-101,Ahmed Naseer,Grade 10A; Grade 10B&#10;TCH-102,Aminath Rasheeda,Grade 10A"></textarea>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <button type="button" id="btn-preview-bulk-teachers" class="btn btn-secondary">Validate &amp; Preview Teachers</button>
+            <button type="button" id="btn-confirm-bulk-teachers" class="btn btn-success" disabled>Confirm &amp; Import Valid Teachers (0)</button>
+            <button type="button" id="btn-clear-bulk-teachers" class="btn btn-secondary btn-sm">Reset Teacher Import</button>
+          </div>
+
+          <div id="bulk-teacher-preview-container" style="display: none;">
+            <div class="stats-grid" style="margin-bottom: 0.9rem;">
+              <div class="stat-card stat-primary">
+                <span class="stat-label">Valid Teachers Ready</span>
+                <span class="stat-value" id="bulk-tch-valid-count">0</span>
+              </div>
+              <div class="stat-card stat-warning">
+                <span class="stat-label">Skipped (ID Already in Sheet)</span>
+                <span class="stat-value" id="bulk-tch-skipped-count">0</span>
+              </div>
+              <div class="stat-card stat-critical">
+                <span class="stat-label">Invalid / Duplicate Rows</span>
+                <span class="stat-value" id="bulk-tch-invalid-count">0</span>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div>
+                <h4 style="margin: 0 0 0.4rem;">Valid Teachers (<span id="bulk-tch-valid-label">0</span>)</h4>
+                <div class="table-responsive" style="max-height: 220px;">
+                  <table class="data-table">
+                    <thead><tr><th>Row</th><th>Teacher ID</th><th>Teacher Name</th><th>Classes</th></tr></thead>
+                    <tbody id="bulk-tch-valid-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div>
+                <h4 style="margin: 0 0 0.4rem;">Invalid &amp; Skipped Rows (<span id="bulk-tch-issues-label">0</span>)</h4>
+                <div class="table-responsive" style="max-height: 220px;">
+                  <table class="data-table">
+                    <thead><tr><th>Row</th><th>Teacher ID</th><th>Reason</th></tr></thead>
+                    <tbody id="bulk-tch-issues-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="bulk-teacher-result-summary" style="margin-top: 0.75rem; font-weight: 600;"></div>
+        </div>
+
         <div class="card">
           <div class="card-header">
             <h2 class="card-title">Teacher Directory</h2>
+            <input type="search" id="tch-filter-search" placeholder="Search teachers by name or ID..." style="max-width: 280px;">
           </div>
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table mobile-card-table">
               <thead>
                 <tr>
                   <th>Teacher ID</th>
@@ -454,7 +522,7 @@
             <h2 class="card-title">Leading Teachers Directory</h2>
           </div>
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table mobile-card-table">
               <thead>
                 <tr>
                   <th>Leading Teacher ID</th>
@@ -500,7 +568,7 @@
             <h2 class="card-title">Teaching Assignments</h2>
           </div>
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table mobile-card-table">
               <thead>
                 <tr>
                   <th>Assignment ID</th>
@@ -551,7 +619,7 @@
             <h2 class="card-title">Leading Teacher Class Assignments</h2>
           </div>
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table mobile-card-table">
               <thead>
                 <tr>
                   <th>Assignment ID</th>
@@ -618,8 +686,8 @@
                 <p class="card-subtitle">Locations students can visit when leaving the classroom.</p>
               </div>
             </div>
-            <form id="add-destination-form" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-              <input type="text" id="input-new-destination" placeholder="Add new destination (e.g., Dental Room)" required>
+            <form id="add-destination-form" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+              <input type="text" id="input-new-destination" placeholder="Add new destination (e.g., Dental Room)" required style="flex: 1 1 200px;">
               <button type="submit" class="btn btn-primary">Add Destination</button>
             </form>
             <div class="table-responsive">
@@ -802,7 +870,7 @@
             <h3 class="card-title">Detailed Movement Records (Read-Only)</h3>
           </div>
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table mobile-card-table">
               <thead>
                 <tr>
                   <th>Movement ID</th>

@@ -79,40 +79,23 @@
       els.connPill.classList.add('conn-error');
       els.connText.textContent = connState.message || 'Connection Error';
     }
-
-    var hint = document.getElementById('endpoint-banner-hint');
-    var pill = document.getElementById('endpoint-env-pill');
-    if (pill) {
-      var isProd = SMT_CONFIG.isUsingProduction();
-      var isLoc = SMT_CONFIG.isUsingLocalOverride();
-      pill.textContent = isProd ? 'Production' : (isLoc ? 'Local Test Proxy' : 'Custom');
-      pill.className = 'endpoint-env-pill' + (isProd ? '' : ' local-dev');
-      if (hint) {
-        hint.textContent = isProd
-          ? 'Shared Google Apps Script Web App (Production)'
-          : (isLoc ? 'Local Test Mock API (http://localhost:3000/api)' : SMT_CONFIG.getWebAppUrl());
-      }
-    }
   }
 
   async function loadLoginOptions() {
     els.authFeedback.textContent = '';
     try {
       var res = await SMT_API.get('getLeadingTeacherLoginOptions');
-      var data = res.data || res || {};
-      state.leadingTeachers = data.leadingTeachers || res.leadingTeachers || [];
-      var sName = data.schoolName || data.school_name || (data.settings && data.settings.school_name);
-      if (sName) {
-        els.schoolName.textContent = sName + ' — Leading Teacher';
+      var data = res.data || {};
+      state.leadingTeachers = data.leadingTeachers || [];
+      if (data.schoolName) {
+        els.schoolName.textContent = data.schoolName + ' — Leading Teacher';
       }
       var opts = ['<option value="">— Select Leading Teacher —</option>'];
       for (var i = 0; i < state.leadingTeachers.length; i++) {
         var lt = state.leadingTeachers[i];
-        var id = lt.LeadingTeacherID || lt.leadingTeacherId || '';
-        var name = lt.LeadingTeacherName || lt.leadingTeacherName || '';
         opts.push(
-          '<option value="' + SMT_UTILS.escapeHtml(id) + '">' +
-          SMT_UTILS.escapeHtml(name) + ' (' + SMT_UTILS.escapeHtml(id) + ')</option>'
+          '<option value="' + SMT_UTILS.escapeHtml(lt.LeadingTeacherID) + '">' +
+          SMT_UTILS.escapeHtml(lt.LeadingTeacherName) + ' (' + SMT_UTILS.escapeHtml(lt.LeadingTeacherID) + ')</option>'
         );
       }
       els.selectProfile.innerHTML = opts.join('');
@@ -229,14 +212,14 @@
 
       html.push(
         '<tr class="' + rowCls + '">' +
-        '  <td><strong>' + SMT_UTILS.escapeHtml(item.StudentName) + '</strong></td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(item.StudentID) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(item.ClassName) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(item.Destination) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(item.TeacherName) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(SMT_UTILS.formatTimeShort(item.TimeOut, item.MovementID)) + '</td>' +
-        '  <td><strong>' + SMT_UTILS.escapeHtml(item.formattedDuration) + '</strong></td>' +
-        '  <td>' + SMT_UTILS.attentionBadgeHtml(item.attentionLevel) + '</td>' +
+        '  <td data-label="Student Name"><strong>' + SMT_UTILS.escapeHtml(item.StudentName) + '</strong></td>' +
+        '  <td data-label="Student ID">' + SMT_UTILS.escapeHtml(item.StudentID) + '</td>' +
+        '  <td data-label="Class">' + SMT_UTILS.escapeHtml(item.ClassName) + '</td>' +
+        '  <td data-label="Destination">' + SMT_UTILS.escapeHtml(item.Destination) + '</td>' +
+        '  <td data-label="Teacher">' + SMT_UTILS.escapeHtml(item.TeacherName) + '</td>' +
+        '  <td data-label="Checkout Time">' + SMT_UTILS.escapeHtml(SMT_UTILS.formatTimeShort(item.TimeOut, item.MovementID)) + '</td>' +
+        '  <td data-label="Elapsed"><strong>' + SMT_UTILS.escapeHtml(item.formattedDuration) + '</strong></td>' +
+        '  <td data-label="Attention">' + SMT_UTILS.attentionBadgeHtml(item.attentionLevel) + '</td>' +
         '</tr>'
       );
     }
@@ -271,15 +254,15 @@
       var rowCls = r.attentionLevel === 'Critical' ? 'row-critical' : (r.attentionLevel === 'Warning' ? 'row-warning' : '');
       rows.push(
         '<tr class="' + rowCls + '">' +
-        '  <td><small>' + SMT_UTILS.escapeHtml(r.MovementID) + '</small></td>' +
-        '  <td><strong>' + SMT_UTILS.escapeHtml(r.StudentName) + '</strong> (' + SMT_UTILS.escapeHtml(r.StudentID) + ')</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(r.ClassName) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(r.Destination) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeOut, r.MovementID)) + '</td>' +
-        '  <td>' + (r.TimeIn ? SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeIn)) : '—') + '</td>' +
-        '  <td><strong>' + SMT_UTILS.escapeHtml(r.formattedDuration) + '</strong></td>' +
-        '  <td>' + SMT_UTILS.attentionBadgeHtml(r.attentionLevel) + '</td>' +
-        '  <td><span class="badge ' + (r.Status === 'OUT' ? 'badge-warning' : 'badge-active') + '">' + SMT_UTILS.escapeHtml(r.Status) + '</span></td>' +
+        '  <td data-label="Movement ID"><small>' + SMT_UTILS.escapeHtml(r.MovementID) + '</small></td>' +
+        '  <td data-label="Student"><strong>' + SMT_UTILS.escapeHtml(r.StudentName) + '</strong> (' + SMT_UTILS.escapeHtml(r.StudentID) + ')</td>' +
+        '  <td data-label="Class">' + SMT_UTILS.escapeHtml(r.ClassName) + '</td>' +
+        '  <td data-label="Destination">' + SMT_UTILS.escapeHtml(r.Destination) + '</td>' +
+        '  <td data-label="Checkout">' + SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeOut, r.MovementID)) + '</td>' +
+        '  <td data-label="Returned">' + (r.TimeIn ? SMT_UTILS.escapeHtml(SMT_UTILS.formatDateTime(r.TimeIn)) : '—') + '</td>' +
+        '  <td data-label="Duration"><strong>' + SMT_UTILS.escapeHtml(r.formattedDuration) + '</strong></td>' +
+        '  <td data-label="Attention">' + SMT_UTILS.attentionBadgeHtml(r.attentionLevel) + '</td>' +
+        '  <td data-label="Status"><span class="badge ' + (r.Status === 'OUT' ? 'badge-warning' : 'badge-active') + '">' + SMT_UTILS.escapeHtml(r.Status) + '</span></td>' +
         '</tr>'
       );
     }
@@ -388,7 +371,6 @@
     els.filterAttention.addEventListener('change', renderLiveTable);
     els.filterSearch.addEventListener('input', renderLiveTable);
 
-    // Tab switching with automatic scroll into view
     var tabBtns = document.querySelectorAll('[data-lt-tab]');
     for (var i = 0; i < tabBtns.length; i++) {
       tabBtns[i].addEventListener('click', function (e) {

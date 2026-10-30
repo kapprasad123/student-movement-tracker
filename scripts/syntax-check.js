@@ -18,8 +18,6 @@ const JS_AND_GS_FILES = [
   'js/leading-teacher-dashboard.js',
   'js/admin-dashboard.js',
   'server.js',
-  'scripts/seed-test-spreadsheet.js',
-  'scripts/create-test-sheet.js',
   'tests/gas-mock.js',
   'tests/run-tests.js'
 ];

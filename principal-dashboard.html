@@ -36,17 +36,14 @@
   </header>
 
   <main class="main-container">
-    <!-- Shared Backend Connection Status Banner -->
-    <section id="endpoint-config-banner" class="config-banner shared-status-banner">
+    <section id="endpoint-config-banner" class="config-banner">
       <div class="config-banner-text">
-        <strong>Backend Connection:</strong>
-        <span id="endpoint-banner-hint">Shared Google Apps Script Web App (Production)</span>
+        <strong>Google Apps Script Web App Endpoint:</strong>
+        <span>Connect your deployed Google Apps Script Web App URL (or local test endpoint) to load live Google Sheets data.</span>
       </div>
-      <div class="config-banner-meta">
-        <span class="endpoint-env-pill" id="endpoint-env-pill">Production</span>
-      </div>
-      <form id="endpoint-config-form" style="display: none;">
-        <input type="hidden" id="input-webapp-url">
+      <form id="endpoint-config-form" class="config-banner-form">
+        <input type="text" id="input-webapp-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" aria-label="Google Apps Script Web App URL" style="max-width: 420px;">
+        <button type="submit" class="btn btn-primary btn-sm">Save &amp; Connect</button>
       </form>
     </section>
 
@@ -142,7 +139,7 @@
         </div>
 
         <div class="table-responsive">
-          <table class="data-table" aria-label="Principal Live Student Movements">
+          <table class="data-table mobile-card-table" aria-label="Principal Live Student Movements">
             <thead>
               <tr>
                 <th>Student Name</th>

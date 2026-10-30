@@ -222,16 +222,6 @@
       throw apiError;
     }
 
-    // Ensure response has normalized data object for compatibility across deployment versions
-    if (json.data === undefined) {
-      json.data = {};
-      for (var k in json) {
-        if (k !== 'success' && k !== 'message' && k !== 'data') {
-          json.data[k] = json[k];
-        }
-      }
-    }
-
     notifyConnectionState('connected', 'Connected to Google Sheets');
     return json;
   }

@@ -65,20 +65,6 @@
       els.connPill.classList.add('conn-error');
       els.connText.textContent = connState.message || 'Connection Error';
     }
-
-    var hint = document.getElementById('endpoint-banner-hint');
-    var pill = document.getElementById('endpoint-env-pill');
-    if (pill) {
-      var isProd = SMT_CONFIG.isUsingProduction();
-      var isLoc = SMT_CONFIG.isUsingLocalOverride();
-      pill.textContent = isProd ? 'Production' : (isLoc ? 'Local Test Proxy' : 'Custom');
-      pill.className = 'endpoint-env-pill' + (isProd ? '' : ' local-dev');
-      if (hint) {
-        hint.textContent = isProd
-          ? 'Shared Google Apps Script Web App (Production)'
-          : (isLoc ? 'Local Test Mock API (http://localhost:3000/api)' : SMT_CONFIG.getWebAppUrl());
-      }
-    }
   }
 
   function renderFilterOptions() {
@@ -179,15 +165,15 @@
 
       rows.push(
         '<tr class="' + rowCls + '">' +
-        '  <td><strong>' + SMT_UTILS.escapeHtml(rec.StudentName) + '</strong></td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(rec.StudentID) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(rec.ClassName) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(rec.TeacherName) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(rec.Destination) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(SMT_UTILS.formatTimeShort(rec.TimeOut, rec.MovementID)) + '</td>' +
-        '  <td><strong>' + SMT_UTILS.escapeHtml(rec.formattedDuration) + '</strong></td>' +
-        '  <td>' + SMT_UTILS.attentionBadgeHtml(rec.attentionLevel) + '</td>' +
-        '  <td><span class="badge badge-warning">' + SMT_UTILS.escapeHtml(rec.Status) + '</span></td>' +
+        '  <td data-label="Student Name"><strong>' + SMT_UTILS.escapeHtml(rec.StudentName) + '</strong></td>' +
+        '  <td data-label="Student ID">' + SMT_UTILS.escapeHtml(rec.StudentID) + '</td>' +
+        '  <td data-label="Class">' + SMT_UTILS.escapeHtml(rec.ClassName) + '</td>' +
+        '  <td data-label="Teacher">' + SMT_UTILS.escapeHtml(rec.TeacherName) + '</td>' +
+        '  <td data-label="Destination">' + SMT_UTILS.escapeHtml(rec.Destination) + '</td>' +
+        '  <td data-label="Checkout Time">' + SMT_UTILS.escapeHtml(SMT_UTILS.formatTimeShort(rec.TimeOut, rec.MovementID)) + '</td>' +
+        '  <td data-label="Elapsed"><strong>' + SMT_UTILS.escapeHtml(rec.formattedDuration) + '</strong></td>' +
+        '  <td data-label="Attention">' + SMT_UTILS.attentionBadgeHtml(rec.attentionLevel) + '</td>' +
+        '  <td data-label="Status"><span class="badge badge-warning">' + SMT_UTILS.escapeHtml(rec.Status) + '</span></td>' +
         '</tr>'
       );
     }
@@ -326,10 +312,8 @@
         await loadDashboardData(false);
       } else {
         SMT_API.get('getSettings').then(function (res) {
-          var s = res.data || res.settings || res || {};
-          var name = s.schoolName || s.school_name;
-          if (name) {
-            els.schoolName.textContent = name + ' — Principal Monitor';
+          if (res.data && res.data.schoolName) {
+            els.schoolName.textContent = res.data.schoolName + ' — Principal Monitor';
           }
         }).catch(function () {});
       }

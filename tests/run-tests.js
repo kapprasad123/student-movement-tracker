@@ -354,10 +354,10 @@ async function main() {
     assert.strictEqual(ltaConflict.code, 'DUPLICATE_ASSIGNMENT');
   });
 
-  // 5. Bulk Student Import Validation & Execution
-  console.log('\n5. Bulk CSV / Tabular Student Import');
+  // 5. Bulk Student & Bulk Teacher Import (60+ Teachers via CSV / Excel Paste)
+  console.log('\n5. Bulk Student & Bulk Teacher Import (CSV / Excel)');
 
-  await runTest('Client & Server Bulk Import: supports column aliases, detects sheet & batch duplicates, leaves Movement_Log untouched', () => {
+  await runTest('Client & Server Bulk Student Import: supports column aliases, detects sheet & batch duplicates, leaves Movement_Log untouched', () => {
     const csvText = [
       'admission_no,full_name,grade',
       'STU-101,Existing Student,Grade 10-A (Science)',
@@ -376,9 +376,9 @@ async function main() {
       studentsRes.data.students
     );
 
-    assert.strictEqual(preview.valid.length, 2, 'Should have 2 valid rows (STU-201, STU-202)');
-    assert.strictEqual(preview.skipped.length, 1, 'Should skip STU-101 already in sheet');
-    assert.strictEqual(preview.invalid.length, 2, 'Should flag duplicate STU-201 in batch and unknown class');
+    assert.strictEqual(preview.valid.length, 2);
+    assert.strictEqual(preview.skipped.length, 1);
+    assert.strictEqual(preview.invalid.length, 2);
 
     const bulkRes = invokePost({
       action: 'bulkAddStudents',
@@ -395,6 +395,44 @@ async function main() {
     assert.strictEqual(bulkRes.data.addedCount, 2);
     assert.strictEqual(bulkRes.data.skippedCount, 1);
     assert.strictEqual(bulkRes.data.invalidCount, 2);
+  });
+
+  await runTest('Bulk Teacher Import (CSV / Excel TSV for 60 teachers): validates aliases, creates class assignments, skips existing IDs, flags duplicates', () => {
+    const classesRes = invokeGet({ action: 'getClasses', token: adminToken });
+    const teachersRes = invokeGet({ action: 'getTeachers', token: adminToken });
+
+    // Generate 60 new teachers + 1 existing (TCH-01) + 1 batch duplicate + 1 invalid class in Excel tab-delimited format
+    const tsvRows = ['staff_id\tfull_name\tassigned_classes\tstatus'];
+    tsvRows.push('TCH-01\tAlready Exists Teacher\tGrade 10B\tActive'); // Should be skipped
+    for (let i = 1; i <= 60; i++) {
+      const tid = `TCH-BULK-${String(i).padStart(2, '0')}`;
+      const cls = i <= 5 ? 'Grade 10-A (Science); Grade 10B' : '';
+      tsvRows.push(`${tid}\tTeacher Staff ${i}\t${cls}\tActive`);
+    }
+    tsvRows.push('TCH-BULK-01\tDuplicate Batch Teacher\tGrade 10B\tActive'); // Invalid (batch duplicate)
+    tsvRows.push('TCH-BULK-99\tUnknown Class Teacher\tGrade 99Z\tActive'); // Invalid (unknown class)
+
+    const preview = SMT_UTILS.parseAndValidateTeacherImport(
+      tsvRows.join('\n'),
+      teachersRes.data.teachers,
+      classesRes.data.classes
+    );
+
+    assert.strictEqual(preview.valid.length, 60, 'Should validate all 60 new teachers');
+    assert.strictEqual(preview.skipped.length, 1, 'Should skip TCH-01 already in sheet');
+    assert.strictEqual(preview.invalid.length, 2, 'Should flag duplicate TCH-BULK-01 and unknown class Grade 99Z');
+
+    const bulkTchRes = invokePost({
+      action: 'bulkAddTeachers',
+      token: adminToken,
+      teachers: preview.valid
+    });
+    assert.strictEqual(bulkTchRes.success, true);
+    assert.strictEqual(bulkTchRes.data.addedCount, 60);
+    assert.strictEqual(bulkTchRes.data.assignmentsCreatedCount, 10, 'First 5 teachers had 2 classes each = 10 assignments');
+
+    const afterTeachers = invokeGet({ action: 'getTeachers', token: adminToken });
+    assert.strictEqual(afterTeachers.data.teachers.length, 62, '2 initial + 60 bulk imported teachers = 62 teachers');
   });
 
   // 6. Movement OUT & RETURN Operations, Identity Binding, and Concurrency
@@ -691,8 +729,8 @@ async function main() {
     assert.strictEqual(pLogin.success, true);
   });
 
-  // 10. Malformed Request Handling, Local Server & Frontend Regression Verification
-  console.log('\n10. Error Handling, Local Server & Frontend Regression Checks');
+  // 10. Error Handling, Mobile-Friendly UI & Local Server Regression Checks
+  console.log('\n10. Error Handling, Mobile-Friendly UI & Local Server Regression Checks');
 
   await runTest('Handles malformed JSON requests and unknown actions gracefully without exposing stack traces', () => {
     const badJsonOut = Code.doPost({
@@ -708,24 +746,6 @@ async function main() {
     assert.strictEqual(unknownAct.code, 'UNKNOWN_ACTION');
   });
 
-  await runTest('Central configuration defaults to production Web App URL and supports intentional local-dev override', () => {
-    SMT_CONFIG.resetToDefault();
-    const prodUrl = 'https://script.google.com/macros/s/AKfycbygZM_HFzRnom0e3AFk4pSyvHufSLyF0hCpPba9oSr9wkyGXQrT-8SsMTU3MoLI-vtB/exec';
-    assert.strictEqual(SMT_CONFIG.getWebAppUrl(), prodUrl);
-    assert.strictEqual(SMT_CONFIG.isUsingProduction(), true);
-
-    // Intentional local development override
-    SMT_CONFIG.setWebAppUrl('http://localhost:3000/api');
-    assert.strictEqual(SMT_CONFIG.getWebAppUrl(), 'http://localhost:3000/api');
-    assert.strictEqual(SMT_CONFIG.isUsingLocalOverride(), true);
-    assert.strictEqual(SMT_CONFIG.isUsingProduction(), false);
-
-    // Reset back to default production
-    SMT_CONFIG.resetToDefault();
-    assert.strictEqual(SMT_CONFIG.getWebAppUrl(), prodUrl);
-    assert.strictEqual(SMT_CONFIG.isUsingProduction(), true);
-  });
-
   await runTest('Shared API client (js/api.js) never reports Connected to Google Sheets before a successful backend response', async () => {
     SMT_CONFIG.setWebAppUrl('');
     assert.notStrictEqual(SMT_API.getConnectionState().status, 'connected');
@@ -736,6 +756,24 @@ async function main() {
       (err) => err.code === 'UNCONFIGURED_URL'
     );
     assert.strictEqual(SMT_API.getConnectionState().status, 'unconfigured');
+  });
+
+  await runTest('All 4 HTML dashboards include mobile viewport, mobile-card-table support, and responsive styles', () => {
+    const files = [
+      'index.html',
+      'principal-dashboard.html',
+      'leading-teacher-dashboard.html',
+      'admin-dashboard.html'
+    ];
+    for (const f of files) {
+      const html = fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+      assert.ok(html.includes('name="viewport" content="width=device-width, initial-scale=1.0"'), `${f} must include mobile viewport meta`);
+      assert.ok(html.includes('mobile-card-table'), `${f} must include mobile-card-table responsive tables`);
+      assert.ok(html.includes('class="role-nav"'), `${f} must include role navigation`);
+    }
+    const adminHtml = fs.readFileSync(path.join(__dirname, '..', 'admin-dashboard.html'), 'utf8');
+    assert.ok(adminHtml.includes('id="bulk-teacher-file"'), 'admin-dashboard.html must include bulk teacher file upload');
+    assert.ok(adminHtml.includes('id="bulk-teacher-textarea"'), 'admin-dashboard.html must include bulk teacher paste textarea');
   });
 
   await runTest('Local development HTTP server serves all 4 dashboards and assets with HTTP 200', async () => {

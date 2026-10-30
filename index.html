@@ -36,17 +36,15 @@
   </header>
 
   <main class="main-container">
-    <!-- Shared Backend Connection Status Banner -->
-    <section id="endpoint-config-banner" class="config-banner shared-status-banner">
+    <!-- Backend Endpoint Configuration Bar -->
+    <section id="endpoint-config-banner" class="config-banner">
       <div class="config-banner-text">
-        <strong>Backend Connection:</strong>
-        <span id="endpoint-banner-hint">Shared Google Apps Script Web App (Production)</span>
+        <strong>Google Apps Script Web App Endpoint:</strong>
+        <span id="endpoint-banner-hint">Connect your deployed Google Apps Script Web App URL (or local test endpoint) to load live Google Sheets data.</span>
       </div>
-      <div class="config-banner-meta">
-        <span class="endpoint-env-pill" id="endpoint-env-pill">Production</span>
-      </div>
-      <form id="endpoint-config-form" style="display: none;">
-        <input type="hidden" id="input-webapp-url">
+      <form id="endpoint-config-form" class="config-banner-form">
+        <input type="text" id="input-webapp-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" aria-label="Google Apps Script Web App URL" style="max-width: 420px;">
+        <button type="submit" class="btn btn-primary btn-sm">Save &amp; Connect</button>
       </form>
     </section>
 
@@ -81,10 +79,16 @@
       <div id="teacher-auth-feedback" style="color: #991b1b; font-size: 0.86rem; font-weight: 600; margin-top: 0.25rem;"></div>
     </section>
 
+    <!-- Mobile Quick-Switch Bar (visible on mobile screens when authenticated) -->
+    <div id="teacher-mobile-toggle" class="mobile-workspace-toggle" style="display: none;" role="tablist" aria-label="Classroom Mobile View Switcher">
+      <button type="button" class="active" data-mobile-pane="checkout">Record OUT</button>
+      <button type="button" data-mobile-pane="active-out">Currently OUT (<span id="mobile-out-badge">0</span>)</button>
+    </div>
+
     <!-- Authenticated Classroom Workspace -->
     <div id="teacher-workspace" class="workspace-grid" style="display: none;">
       <!-- Left Column: Record Student OUT -->
-      <section class="card" aria-labelledby="checkout-heading">
+      <section id="teacher-pane-checkout" class="card" aria-labelledby="checkout-heading">
         <div class="card-header">
           <div>
             <h2 class="card-title" id="checkout-heading">Record Student OUT</h2>
@@ -141,13 +145,13 @@
             <div id="selected-student-summary" style="font-size: 0.88rem; color: var(--text-secondary);">
               No student selected
             </div>
-            <button type="submit" id="btn-mark-out" class="btn btn-primary" disabled>Mark Student OUT</button>
+            <button type="submit" id="btn-mark-out" class="btn btn-primary" disabled style="flex: 1 1 auto; max-width: 260px;">Mark Student OUT</button>
           </div>
         </form>
       </section>
 
       <!-- Right Column: Students Currently OUT -->
-      <section class="card" aria-labelledby="active-out-heading">
+      <section id="teacher-pane-active-out" class="card" aria-labelledby="active-out-heading">
         <div class="card-header">
           <div>
             <h2 class="card-title" id="active-out-heading">
@@ -169,7 +173,7 @@
         </div>
 
         <div class="table-responsive">
-          <table class="data-table" aria-label="Students Currently Out">
+          <table class="data-table mobile-card-table" aria-label="Students Currently Out">
             <thead>
               <tr>
                 <th>Student</th>

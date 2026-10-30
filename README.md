@@ -97,10 +97,5 @@ npm test
 2. Authenticate with `npx clasp login`.
 3. When ready and approved, push code with `npx clasp push`.
 
-### Step 3: Central Endpoint Configuration
-The application uses one shared central configuration in `js/config.js` (`PRODUCTION_WEB_APP_URL`):
-- **Production Endpoint (Default):**
-  `https://script.google.com/macros/s/AKfycbygZM_HFzRnom0e3AFk4pSyvHufSLyF0hCpPba9oSr9wkyGXQrT-8SsMTU3MoLI-vtB/exec`
-- All four dashboards (Teacher, Principal, Leading Teacher, Admin) connect to this exact same backend automatically without requiring manual URL entry.
-- **Local Development Override:**
-  Administrators can toggle between the production Google Apps Script backend and the local mock test proxy (`http://localhost:3000/api`) directly from the Admin Dashboard, or by using URL parameter `?local=true`.
+### Step 3: Connect the Frontend
+- Paste your **Web App URL** into `js/config.js` (`WEB_APP_URL`), **or** paste it directly into the **Google Apps Script Web App Endpoint** bar at the top of any dashboard and click **Save & Connect**.

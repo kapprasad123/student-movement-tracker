@@ -1,20 +1,10 @@
 {
-  "webAppUrl": "https://script.google.com/macros/s/AKfycbygZM_HFzRnom0e3AFk4pSyvHufSLyF0hCpPba9oSr9wkyGXQrT-8SsMTU3MoLI-vtB/exec",
-  "localDevUrl": "http://localhost:3000/api",
+  "webAppUrl": "",
   "spreadsheetId": "",
   "schoolTimezone": "Indian/Maldives",
   "autoRefreshIntervalMs": 10000,
   "thresholds": {
     "warningMinutes": 10,
     "criticalMinutes": 15
-  },
-  "activeEnvironment": "test",
-  "testSpreadsheetPath": "C:\\Users\\kappr\\Downloads\\student-movement-tracker\\student-movement-tracker\\test-spreadsheet",
-  "testCredentials": {
-    "adminPasscode": "AdminSecret#2026",
-    "principalPasscode": "PrincipalPass#2026",
-    "leadingTeacherPasscode": "LeadTeacher#2026",
-    "teacherPin": "4829"
-  },
-  "connectedEndpoint": "http://localhost:3000/api"
+  }
 }

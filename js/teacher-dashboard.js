@@ -16,7 +16,8 @@
     submittingOut: false,
     returningIds: {},
     refreshTimer: null,
-    durationTickTimer: null
+    durationTickTimer: null,
+    activeMobilePane: 'checkout'
   };
 
   var els = {};
@@ -39,6 +40,11 @@
     els.btnTeacherLogin = document.getElementById('btn-teacher-login');
     els.btnReloadLogin = document.getElementById('btn-reload-login-options');
     els.authFeedback = document.getElementById('teacher-auth-feedback');
+
+    els.mobileToggle = document.getElementById('teacher-mobile-toggle');
+    els.mobileOutBadge = document.getElementById('mobile-out-badge');
+    els.paneCheckout = document.getElementById('teacher-pane-checkout');
+    els.paneActiveOut = document.getElementById('teacher-pane-active-out');
 
     els.workspace = document.getElementById('teacher-workspace');
     els.activeTeacherLabel = document.getElementById('active-teacher-label');
@@ -79,20 +85,6 @@
       els.connPill.classList.add('conn-error');
       els.connText.textContent = connState.message || 'Connection Error';
     }
-
-    var hint = document.getElementById('endpoint-banner-hint');
-    var pill = document.getElementById('endpoint-env-pill');
-    if (pill) {
-      var isProd = SMT_CONFIG.isUsingProduction();
-      var isLoc = SMT_CONFIG.isUsingLocalOverride();
-      pill.textContent = isProd ? 'Production' : (isLoc ? 'Local Test Proxy' : 'Custom');
-      pill.className = 'endpoint-env-pill' + (isProd ? '' : ' local-dev');
-      if (hint) {
-        hint.textContent = isProd
-          ? 'Shared Google Apps Script Web App (Production)'
-          : (isLoc ? 'Local Test Mock API (http://localhost:3000/api)' : SMT_CONFIG.getWebAppUrl());
-      }
-    }
   }
 
   function renderTeacherSelectOptions() {
@@ -100,10 +92,8 @@
     var switchHtml = ['<option value="">— Switch Teacher —</option>'];
     for (var i = 0; i < state.teachers.length; i++) {
       var t = state.teachers[i];
-      var id = t.TeacherID || t.teacherId || '';
-      var name = t.TeacherName || t.teacherName || '';
-      var opt = '<option value="' + SMT_UTILS.escapeHtml(id) + '">' +
-        SMT_UTILS.escapeHtml(name) + ' (' + SMT_UTILS.escapeHtml(id) + ')</option>';
+      var opt = '<option value="' + SMT_UTILS.escapeHtml(t.TeacherID) + '">' +
+        SMT_UTILS.escapeHtml(t.TeacherName) + ' (' + SMT_UTILS.escapeHtml(t.TeacherID) + ')</option>';
       html.push(opt);
       switchHtml.push(opt);
     }
@@ -218,7 +208,10 @@
   }
 
   function renderCurrentOutTable() {
-    els.currentOutCount.textContent = String(state.currentOutRecords.length);
+    var countStr = String(state.currentOutRecords.length);
+    els.currentOutCount.textContent = countStr;
+    if (els.mobileOutBadge) els.mobileOutBadge.textContent = countStr;
+
     if (state.currentOutRecords.length === 0) {
       els.currentOutTbody.innerHTML = '<tr><td colspan="8" class="empty-state">No students are currently outside the classroom.</td></tr>';
       return;
@@ -244,14 +237,14 @@
 
       html.push(
         '<tr class="' + rowClass + '" data-movement-id="' + SMT_UTILS.escapeHtml(rec.MovementID) + '">' +
-        '  <td><strong>' + SMT_UTILS.escapeHtml(rec.StudentName) + '</strong><br><small style="color: var(--text-muted);">' + SMT_UTILS.escapeHtml(rec.StudentID) + '</small></td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(rec.ClassName) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(rec.Destination) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(SMT_UTILS.formatTimeShort(rec.TimeOut, rec.MovementID)) + '</td>' +
-        '  <td><strong>' + SMT_UTILS.escapeHtml(liveMetrics.formattedDuration) + '</strong></td>' +
-        '  <td>' + SMT_UTILS.attentionBadgeHtml(liveMetrics.attentionLevel) + '</td>' +
-        '  <td>' + SMT_UTILS.escapeHtml(rec.TeacherName) + '</td>' +
-        '  <td>' +
+        '  <td data-label="Student"><div><strong>' + SMT_UTILS.escapeHtml(rec.StudentName) + '</strong><br><small style="color: var(--text-muted);">' + SMT_UTILS.escapeHtml(rec.StudentID) + '</small></div></td>' +
+        '  <td data-label="Class">' + SMT_UTILS.escapeHtml(rec.ClassName) + '</td>' +
+        '  <td data-label="Destination">' + SMT_UTILS.escapeHtml(rec.Destination) + '</td>' +
+        '  <td data-label="Checkout Time">' + SMT_UTILS.escapeHtml(SMT_UTILS.formatTimeShort(rec.TimeOut, rec.MovementID)) + '</td>' +
+        '  <td data-label="Elapsed"><strong>' + SMT_UTILS.escapeHtml(liveMetrics.formattedDuration) + '</strong></td>' +
+        '  <td data-label="Attention">' + SMT_UTILS.attentionBadgeHtml(liveMetrics.attentionLevel) + '</td>' +
+        '  <td data-label="Teacher">' + SMT_UTILS.escapeHtml(rec.TeacherName) + '</td>' +
+        '  <td data-label="Action">' +
         '    <button type="button" class="btn btn-success btn-sm btn-return-student" ' +
         '      data-movement-id="' + SMT_UTILS.escapeHtml(rec.MovementID) + '" ' +
         '      data-student-id="' + SMT_UTILS.escapeHtml(rec.StudentID) + '" ' +
@@ -266,18 +259,29 @@
     els.currentOutTbody.innerHTML = html.join('');
   }
 
+  function applyMobilePaneVisibility() {
+    if (!els.paneCheckout || !els.paneActiveOut) return;
+    var isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    if (!isMobile) {
+      els.paneCheckout.classList.remove('mobile-panel-hidden');
+      els.paneActiveOut.classList.remove('mobile-panel-hidden');
+      return;
+    }
+    els.paneCheckout.classList.toggle('mobile-panel-hidden', state.activeMobilePane !== 'checkout');
+    els.paneActiveOut.classList.toggle('mobile-panel-hidden', state.activeMobilePane !== 'active-out');
+  }
+
   async function loadBootstrapOptions() {
     els.authFeedback.textContent = '';
     try {
       var res = await SMT_API.get('getTeacherLoginOptions');
-      var data = res.data || res || {};
-      state.teachers = data.teachers || res.teachers || [];
-      state.destinations = data.destinations || res.destinations || (data.settings && data.settings.destinations) || [];
-      state.warningMinutes = Number(data.warningMinutes || data.warning_minutes || (data.settings && data.settings.warning_minutes) || 10);
-      state.criticalMinutes = Number(data.criticalMinutes || data.critical_minutes || (data.settings && data.settings.critical_minutes) || 15);
-      var schoolName = data.schoolName || data.school_name || (data.settings && data.settings.school_name);
-      if (schoolName) {
-        els.schoolName.textContent = schoolName + ' — Movement Tracker';
+      var data = res.data || {};
+      state.teachers = data.teachers || [];
+      state.destinations = data.destinations || [];
+      state.warningMinutes = Number(data.warningMinutes || 10);
+      state.criticalMinutes = Number(data.criticalMinutes || 15);
+      if (data.schoolName) {
+        els.schoolName.textContent = data.schoolName + ' — Movement Tracker';
       }
       renderTeacherSelectOptions();
       renderDestinationControls();
@@ -297,7 +301,9 @@
     els.activeTeacherLabel.textContent = session.teacherName + ' (' + session.teacherId + ')';
     els.btnLockSession.style.display = 'inline-flex';
     els.authSection.style.display = 'none';
+    if (els.mobileToggle) els.mobileToggle.style.display = '';
     els.workspace.style.display = 'grid';
+    applyMobilePaneVisibility();
 
     try {
       var results = await Promise.all([
@@ -357,14 +363,12 @@
     }
   }
 
-  /**
-   * Clears the previous teacher's session and requires re-authentication.
-   */
   function lockOrClearTeacherSession(preselectTeacherId) {
     SMT_API.clearSession('teacher');
     state.selectedStudentId = '';
     els.sessionPill.textContent = 'Locked (No Active Teacher)';
     els.btnLockSession.style.display = 'none';
+    if (els.mobileToggle) els.mobileToggle.style.display = 'none';
     els.workspace.style.display = 'none';
     els.authSection.style.display = 'block';
     els.inputTeacherPin.value = '';
@@ -378,12 +382,26 @@
   function bindEvents() {
     SMT_API.onConnectionStateChange(updateConnectionIndicator);
 
+    window.addEventListener('resize', applyMobilePaneVisibility);
     window.addEventListener('online', function () {
       refreshCurrentOutOnly(true);
     });
     window.addEventListener('offline', function () {
       updateConnectionIndicator({ status: 'offline', message: 'Offline' });
     });
+
+    if (els.mobileToggle) {
+      els.mobileToggle.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-mobile-pane]');
+        if (!btn) return;
+        state.activeMobilePane = btn.getAttribute('data-mobile-pane');
+        var btns = els.mobileToggle.querySelectorAll('[data-mobile-pane]');
+        for (var i = 0; i < btns.length; i++) {
+          btns[i].classList.toggle('active', btns[i] === btn);
+        }
+        applyMobilePaneVisibility();
+      });
+    }
 
     els.endpointForm.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -396,13 +414,11 @@
       loadBootstrapOptions();
     });
 
-    // Clearing any existing session immediately if user changes teacher in login dropdown
     els.selectLoginTeacher.addEventListener('change', function () {
       SMT_API.clearSession('teacher');
       els.authFeedback.textContent = '';
     });
 
-    // Switching teachers inside the workspace immediately clears the previous teacher's session
     els.selectSwitchTeacher.addEventListener('change', function () {
       var nextTeacherId = els.selectSwitchTeacher.value;
       els.selectSwitchTeacher.value = '';
@@ -426,7 +442,6 @@
       els.btnTeacherLogin.disabled = true;
       els.authFeedback.textContent = '';
       try {
-        // Clear any prior teacher session before authenticating
         SMT_API.clearSession('teacher');
         var res = await SMT_API.post('verifyTeacherPasscode', {
           teacherId: teacherId,

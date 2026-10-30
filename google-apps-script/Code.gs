@@ -8,7 +8,7 @@
  * - Salted iterated SHA-256 credential hashing & constant-time verification
  * - Atomic movement recording (OUT & RETURN) using LockService
  * - Authoritative timestamp preservation and 1899 date-corruption protection
- * - Comprehensive CRUD, bulk student import validation, and movement analytics
+ * - Comprehensive CRUD, bulk student & teacher import validation, and movement analytics
  */
 
 var SMT_SHEETS = {
@@ -120,9 +120,6 @@ function handleRequest_(method, e) {
   }
 }
 
-/**
- * Creates a public-safe application error with a structured code.
- */
 function appError_(message, code) {
   var err = new Error(message);
   err.isPublicError = true;
@@ -130,9 +127,6 @@ function appError_(message, code) {
   return err;
 }
 
-/**
- * Formats response JSON consistently for ContentService.
- */
 function jsonResponse_(success, data, messageOrError, code) {
   var body = {
     success: Boolean(success)
@@ -158,9 +152,6 @@ function createJsonOutput_(obj) {
   };
 }
 
-/**
- * Parses GET query parameters and POST JSON/form bodies safely.
- */
 function parseRequestPayload_(method, e) {
   var payload = {};
   if (!e) {
@@ -192,9 +183,6 @@ function parseRequestPayload_(method, e) {
   return payload;
 }
 
-/**
- * Resolves the configured Google Spreadsheet without inventing fake IDs.
- */
 function getSpreadsheet_() {
   var props = PropertiesService.getScriptProperties();
   var configuredId = props ? String(props.getProperty('SPREADSHEET_ID') || '').trim() : '';
@@ -212,9 +200,6 @@ function getSpreadsheet_() {
   throw appError_('No Google Spreadsheet is bound or configured in Script Properties (SPREADSHEET_ID).', 'SPREADSHEET_NOT_CONFIGURED');
 }
 
-/**
- * Safely ensures all 8 required sheets and their headers exist without clearing or duplicating data.
- */
 function ensureWorkbookInitialized_(ss) {
   var sheetKeys = Object.keys(SMT_SHEETS);
   for (var i = 0; i < sheetKeys.length; i++) {
@@ -253,7 +238,6 @@ function ensureWorkbookInitialized_(ss) {
     }
   }
 
-  // Ensure default public settings exist without overwriting existing values
   var settingsMap = getRawSettingsMap_(ss);
   var defaultKeys = Object.keys(DEFAULT_PUBLIC_SETTINGS);
   var missingSettingRows = [];
@@ -270,9 +254,6 @@ function ensureWorkbookInitialized_(ss) {
   }
 }
 
-/**
- * Header-based table reader: maps every row to an object using header names.
- */
 function readSheetRecords_(ss, sheetName) {
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
@@ -320,9 +301,6 @@ function readSheetRecords_(ss, sheetName) {
   };
 }
 
-/**
- * Appends a record to a sheet by mapping object properties to the sheet's actual header positions.
- */
 function appendSheetRecord_(ss, sheetName, recordObj) {
   var table = readSheetRecords_(ss, sheetName);
   var rowArray = new Array(table.headers.length);
@@ -345,9 +323,6 @@ function appendSheetRecord_(ss, sheetName, recordObj) {
   return nextRow;
 }
 
-/**
- * Updates a specific 1-based row number in a sheet by mapping object properties to header positions.
- */
 function updateSheetRecordByRow_(table, rowNumber, updatesObj) {
   var currentRow = table.sheet.getRange(rowNumber, 1, 1, table.headers.length).getValues()[0];
   var updateKeys = Object.keys(updatesObj);
@@ -361,9 +336,6 @@ function updateSheetRecordByRow_(table, rowNumber, updatesObj) {
   table.sheet.getRange(rowNumber, 1, 1, table.headers.length).setValues([currentRow]);
 }
 
-/**
- * Reads raw Settings sheet into a key-value map.
- */
 function getRawSettingsMap_(ss) {
   var table = readSheetRecords_(ss, SMT_SHEETS.SETTINGS.name);
   var map = {};
@@ -377,9 +349,6 @@ function getRawSettingsMap_(ss) {
   return map;
 }
 
-/**
- * Upserts one or more key-value pairs into the Settings sheet.
- */
 function upsertSettingsMap_(ss, updates) {
   var table = readSheetRecords_(ss, SMT_SHEETS.SETTINGS.name);
   var rowByKey = {};
@@ -933,6 +902,8 @@ function dispatchAction_(ss, action, payload) {
       return actionUpdateTeacher_(ss, payload);
     case 'deactivateTeacher':
       return actionDeactivateTeacher_(ss, payload);
+    case 'bulkAddTeachers':
+      return actionBulkAddTeachers_(ss, payload);
     case 'getTeachingAssignments':
       return actionGetTeachingAssignments_(ss, payload);
     case 'addTeachingAssignment':
@@ -1720,10 +1691,6 @@ function hasActiveOutMovementForStudent_(ss, studentId) {
   return false;
 }
 
-/**
- * Bulk student import with validation, duplicate detection (distinguishing sheet-existing IDs vs in-batch duplicates),
- * and zero side-effects on existing records or Movement_Log.
- */
 function actionBulkAddStudents_(ss, payload) {
   requireAuth_(ss, payload, ['admin']);
   var lock = LockService.getScriptLock();
@@ -1975,7 +1942,7 @@ function actionDeactivateClass_(ss, payload) {
 }
 
 // ============================================================================
-// TEACHER MANAGEMENT & TEACHING ASSIGNMENTS
+// TEACHER MANAGEMENT, BULK TEACHER IMPORT & TEACHING ASSIGNMENTS
 // ============================================================================
 
 function actionGetTeachers_(ss, payload) {
@@ -2131,6 +2098,176 @@ function actionDeactivateTeacher_(ss, payload) {
     teacherId: payload.teacherId,
     status: payload.status || 'Inactive'
   });
+}
+
+/**
+ * Bulk teacher import (for 60+ teachers via CSV or Excel paste/upload).
+ * Supports TeacherID (or auto-generated ID), TeacherName, Status, and optional assigned ClassIDs/ClassNames.
+ * Never overwrites existing teachers and never touches Movement_Log.
+ */
+function actionBulkAddTeachers_(ss, payload) {
+  requireAuth_(ss, payload, ['admin']);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var rows = payload.teachers || payload.rows;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      throw appError_('No teacher rows provided for bulk import.', 'EMPTY_IMPORT');
+    }
+
+    var classesTable = readSheetRecords_(ss, SMT_SHEETS.CLASSES.name);
+    var classById = {};
+    var classByNameLower = {};
+    for (var c = 0; c < classesTable.records.length; c++) {
+      var cls = classesTable.records[c];
+      var cid = String(cls.ClassID).trim();
+      var cname = String(cls.ClassName).trim();
+      if (cid) classById[cid.toLowerCase()] = cid;
+      if (cname) classByNameLower[cname.toLowerCase()] = cid;
+    }
+
+    var teachersTable = readSheetRecords_(ss, SMT_SHEETS.TEACHERS.name);
+    var existingIdsLower = {};
+    for (var t = 0; t < teachersTable.records.length; t++) {
+      var tid = String(teachersTable.records[t].TeacherID).trim().toLowerCase();
+      if (tid) existingIdsLower[tid] = true;
+    }
+
+    var assignTable = readSheetRecords_(ss, SMT_SHEETS.TEACHING_ASSIGNMENTS.name);
+    var nextAsgCounter = assignTable.records.length + 101;
+    var nextTchCounter = teachersTable.records.length + 101;
+
+    var seenInBatchLower = {};
+    var added = [];
+    var skipped = [];
+    var invalid = [];
+    var assignmentsCreatedCount = 0;
+    var now = nowIso_();
+
+    for (var i = 0; i < rows.length; i++) {
+      var item = rows[i] || {};
+      var rawId = String(item.teacherId || item.TeacherID || item.id || item.staffId || '').trim();
+      var rawName = String(item.teacherName || item.TeacherName || item.name || '').trim();
+      var rawStatus = String(item.status || item.Status || 'Active').trim();
+      if (rawStatus.toLowerCase() === 'inactive') rawStatus = 'Inactive';
+      else rawStatus = 'Active';
+
+      if (!rawName) {
+        invalid.push({
+          rowIndex: i + 1,
+          teacherId: rawId,
+          teacherName: rawName,
+          reason: 'Missing required TeacherName.'
+        });
+        continue;
+      }
+
+      if (!rawId) {
+        do {
+          rawId = 'TCH-' + (nextTchCounter++) + '-' + generateRandomHex_(2).toUpperCase();
+        } while (existingIdsLower[rawId.toLowerCase()] || seenInBatchLower[rawId.toLowerCase()]);
+      }
+
+      var idLower = rawId.toLowerCase();
+      if (existingIdsLower[idLower]) {
+        skipped.push({
+          rowIndex: i + 1,
+          teacherId: rawId,
+          teacherName: rawName,
+          reason: 'TeacherID already exists in Google Sheets.'
+        });
+        continue;
+      }
+
+      if (seenInBatchLower[idLower]) {
+        invalid.push({
+          rowIndex: i + 1,
+          teacherId: rawId,
+          teacherName: rawName,
+          reason: 'Duplicate TeacherID within the same import batch.'
+        });
+        continue;
+      }
+
+      // Resolve optional class assignments (array or semicolon/pipe/comma separated string)
+      var rawClassList = [];
+      if (Array.isArray(item.classIds)) {
+        rawClassList = item.classIds;
+      } else if (item.classes || item.Classes || item.classRef) {
+        rawClassList = String(item.classes || item.Classes || item.classRef)
+          .split(/[;|,]/)
+          .map(function (s) { return s.trim(); })
+          .filter(Boolean);
+      }
+
+      var resolvedClassIds = [];
+      var unknownClass = null;
+      var seenCls = {};
+      for (var k = 0; k < rawClassList.length; k++) {
+        var cref = String(rawClassList[k] || '').trim();
+        if (!cref) continue;
+        var matchedCid = classById[cref.toLowerCase()] || classByNameLower[cref.toLowerCase()] || null;
+        if (!matchedCid) {
+          unknownClass = cref;
+          break;
+        }
+        if (!seenCls[matchedCid]) {
+          seenCls[matchedCid] = true;
+          resolvedClassIds.push(matchedCid);
+        }
+      }
+
+      if (unknownClass) {
+        invalid.push({
+          rowIndex: i + 1,
+          teacherId: rawId,
+          teacherName: rawName,
+          reason: 'Optional class "' + unknownClass + '" does not match any configured ClassID or ClassName.'
+        });
+        continue;
+      }
+
+      seenInBatchLower[idLower] = true;
+
+      var newTeacher = {
+        TeacherID: rawId,
+        TeacherName: rawName,
+        Status: rawStatus,
+        CreatedAt: now,
+        UpdatedAt: now
+      };
+      appendSheetRecord_(ss, SMT_SHEETS.TEACHERS.name, newTeacher);
+      added.push(newTeacher);
+
+      for (var aIdx = 0; aIdx < resolvedClassIds.length; aIdx++) {
+        var newAsg = {
+          AssignmentID: 'TASG-' + (nextAsgCounter++) + '-' + generateRandomHex_(2).toUpperCase(),
+          TeacherID: rawId,
+          ClassID: resolvedClassIds[aIdx],
+          Status: 'Active',
+          CreatedAt: now,
+          UpdatedAt: now
+        };
+        appendSheetRecord_(ss, SMT_SHEETS.TEACHING_ASSIGNMENTS.name, newAsg);
+        assignmentsCreatedCount++;
+      }
+    }
+
+    return {
+      data: {
+        addedCount: added.length,
+        skippedCount: skipped.length,
+        invalidCount: invalid.length,
+        assignmentsCreatedCount: assignmentsCreatedCount,
+        added: added,
+        skipped: skipped,
+        invalid: invalid
+      },
+      message: 'Bulk teacher import completed: ' + added.length + ' added, ' + skipped.length + ' skipped, ' + invalid.length + ' invalid.'
+    };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function actionGetTeachingAssignments_(ss, payload) {
