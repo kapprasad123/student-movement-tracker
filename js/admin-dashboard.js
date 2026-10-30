@@ -34,6 +34,7 @@
     els.sessionPill = document.getElementById('admin-session-pill');
     els.btnLogout = document.getElementById('btn-logout-admin');
 
+    els.endpointBanner = document.getElementById('endpoint-config-banner');
     els.endpointForm = document.getElementById('endpoint-config-form');
     els.inputWebAppUrl = document.getElementById('input-webapp-url');
 
@@ -74,6 +75,37 @@
     els.workspace.style.display = 'none';
     els.authSection.style.display = 'block';
     els.inputPasscode.value = '';
+  }
+
+  /**
+   * Pings the public getSettings endpoint to verify the Web App URL immediately
+   * (even before the Admin logs in) so the status badge updates to "Connected to Google Sheets".
+   */
+  async function verifyBackendConnection(showSuccessToast) {
+    var typedUrl = els.inputWebAppUrl ? String(els.inputWebAppUrl.value || '').trim() : '';
+    if (typedUrl && !SMT_CONFIG.getWebAppUrl()) {
+      SMT_CONFIG.setWebAppUrl(typedUrl);
+    }
+    if (!SMT_CONFIG.getWebAppUrl()) return false;
+
+    try {
+      var res = await SMT_API.get('getSettings', {});
+      if (res && res.data) {
+        state.settings = res.data;
+        if (res.data.schoolName) {
+          els.schoolName.textContent = res.data.schoolName + ' — Admin Console';
+        }
+      }
+      if (showSuccessToast) {
+        SMT_UTILS.showToast('Connected to Google Sheets backend!', 'success');
+      }
+      return true;
+    } catch (err) {
+      if (showSuccessToast) {
+        SMT_UTILS.showToast(err.message || 'Failed connecting to Google Apps Script URL', 'error');
+      }
+      return false;
+    }
   }
 
   async function loadAllAdminData() {
@@ -515,16 +547,24 @@
   function bindEvents() {
     SMT_API.onConnectionStateChange(updateConnectionIndicator);
 
-    els.endpointForm.addEventListener('submit', function (e) {
+    els.endpointForm.addEventListener('submit', async function (e) {
       e.preventDefault();
-      SMT_CONFIG.setWebAppUrl(els.inputWebAppUrl.value);
+      var url = String(els.inputWebAppUrl.value || '').trim();
+      SMT_CONFIG.setWebAppUrl(url);
       if (SMT_API.getSession('admin')) {
-        loadAllAdminData();
+        await loadAllAdminData();
+      } else {
+        await verifyBackendConnection(true);
       }
     });
 
     els.loginForm.addEventListener('submit', async function (e) {
       e.preventDefault();
+      // If user typed a URL in the endpoint box without clicking Save & Connect first, save it automatically
+      var typedUrl = els.inputWebAppUrl ? String(els.inputWebAppUrl.value || '').trim() : '';
+      if (typedUrl && typedUrl !== SMT_CONFIG.getWebAppUrl()) {
+        SMT_CONFIG.setWebAppUrl(typedUrl);
+      }
       var pass = els.inputPasscode.value;
       if (!pass) return;
       els.btnLogin.disabled = true;
@@ -1231,8 +1271,12 @@
     bindEvents();
     var currentUrl = SMT_CONFIG.getWebAppUrl();
     els.inputWebAppUrl.value = currentUrl;
-    if (currentUrl && SMT_API.getSession('admin')) {
-      await loadAllAdminData();
+    if (currentUrl) {
+      if (SMT_API.getSession('admin')) {
+        await loadAllAdminData();
+      } else {
+        await verifyBackendConnection(false);
+      }
     }
   }
 
